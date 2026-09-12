@@ -1,24 +1,22 @@
-# Imagen oficial de Playwright: trae Chromium y todas sus dependencias.
-# IMPORTANTE: esta versión debe coincidir exactamente con la de "playwright"
-# en package.json, que está fijada sin ^ justamente para eso.
-FROM mcr.microsoft.com/playwright:v1.63.0-noble
+# Base de Node normal. Playwright instala su propio Chromium y las
+# dependencias del sistema que necesite, según la versión exacta que
+# haya en package.json. Así no hay dos versiones que mantener a la vez.
+FROM node:22-bookworm-slim
 
 ENV NODE_ENV=production \
     PORT=3000 \
-    DATA_DIR=/data
+    DATA_DIR=/data \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 WORKDIR /app
 
 COPY package*.json ./
 RUN npm install --omit=dev
-# Red de seguridad: descarga el Chromium que corresponde a esta versión de
-# Playwright aunque la imagen base se quedara corta.
-RUN npx playwright install chromium
+RUN npx playwright install --with-deps chromium
 
 COPY . .
 
-RUN mkdir -p /data && chown -R pwuser:pwuser /data /app
-USER pwuser
+RUN mkdir -p /data
 
 EXPOSE 3000
 CMD ["node", "server.js"]
