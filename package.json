@@ -1,0 +1,22 @@
+{
+  "name": "haul",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Haul — guarda, organiza y comparte todo lo que quieres comprar",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node test/smoke.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "cheerio": "^1.0.0",
+    "express": "^4.21.2",
+    "pg": "^8.13.1",
+    "playwright": "^1.54.2"
+  }
+}

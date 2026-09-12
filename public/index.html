@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5">
+<meta name="theme-color" content="#f6f1ff">
+<meta name="description" content="Haul guarda todo lo que quieres comprar en un mismo sitio: pega el enlace, escanea el código o sube una captura. Organízalo y compártelo en un toque.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Haul">
+<title>Haul · todo lo que quieres, en un sitio</title>
+<!--META-->
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@110..125,400..900&family=Space+Grotesk:wght@400..700&family=Space+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ═══════════════════════════════ BIENVENIDA ══════════════════════════ -->
+  <section class="screen is-active" id="screen-welcome">
+    <div class="between">
+      <div class="logo">haul<em>●</em></div>
+      <span class="chip chip--cyan">beta</span>
+    </div>
+
+    <div style="margin-top:26px">
+      <div class="marquee"><div id="marqueeTrack"></div></div>
+    </div>
+
+    <div style="margin-top:30px;position:relative">
+      <span class="chip chip--pink sticker" style="right:2px;top:-28px">sin cuenta</span>
+      <h1 class="display display--xl">Todo lo que<br>quieres,<br>en un sitio.</h1>
+      <p class="lead" style="margin-top:16px">Pega un enlace, escanea el código o sube una captura. Haul lo ordena por ti y lo comparte en un toque.</p>
+    </div>
+
+    <div class="stack" style="margin-top:24px">
+      <div class="card row" style="padding:14px;gap:13px">
+        <span style="font-size:26px">🔗</span>
+        <div class="grow"><b>Pega el enlace</b><div class="small muted">Sacamos foto, precio y tienda solos.</div></div>
+      </div>
+      <div class="card row" style="padding:14px;gap:13px">
+        <span style="font-size:26px">📷</span>
+        <div class="grow"><b>Escanea en tienda</b><div class="small muted">Código de barras o QR con la cámara.</div></div>
+      </div>
+      <div class="card row" style="padding:14px;gap:13px">
+        <span style="font-size:26px">🖼️</span>
+        <div class="grow"><b>Sube una captura</b><div class="small muted">De TikTok, Instagram o donde sea.</div></div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+    <button class="btn btn--primary btn--block" style="margin-top:22px" data-action="start">Empezar ahora</button>
+    <button class="btn btn--ghost btn--block" data-action="goto-home">Ya he usado Haul</button>
+  </section>
+
+  <!-- ═════════════════════════════════ HOME ══════════════════════════════ -->
+  <section class="screen" id="screen-home">
+    <div class="between">
+      <div>
+        <div class="logo">haul<em>●</em></div>
+        <p class="kicker muted" id="homeGreeting" style="margin-top:4px">TUS HAULS</p>
+      </div>
+      <button class="iconbtn" data-action="goto-profile" aria-label="Perfil">◉</button>
+    </div>
+
+    <div class="stats" id="homeStats"></div>
+
+    <div class="between" style="margin-top:24px">
+      <h2 class="display">Mis listas</h2>
+      <button class="btn btn--sm" data-action="new-list">+ Nueva</button>
+    </div>
+
+    <div class="stack" id="listStack" style="margin-top:14px"></div>
+    <div class="empty hidden" id="homeEmpty">
+      <div class="empty__emoji">🛍️</div>
+      <h3 class="title">Aún no hay nada aquí</h3>
+      <p class="lead" style="margin-top:8px">Crea tu primera lista y empieza a guardar todo lo que te gusta.</p>
+      <button class="btn btn--primary btn--block" style="margin-top:18px" data-action="new-list">Crear mi primer haul</button>
+    </div>
+
+    <div id="savedSection" class="hidden" style="margin-top:28px">
+      <h2 class="display">Guardadas de otros</h2>
+      <div class="stack" id="savedStack" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════ LISTA ═══════════════════════════════ -->
+  <section class="screen" id="screen-list">
+    <div class="between">
+      <button class="iconbtn" data-action="goto-home" aria-label="Volver">←</button>
+      <div class="row" style="gap:8px">
+        <button class="iconbtn" data-action="edit-list" id="btnEditList" aria-label="Editar lista">✎</button>
+        <button class="iconbtn iconbtn--accent" data-action="share-list" aria-label="Compartir">↗</button>
+      </div>
+    </div>
+
+    <div id="listBanner"></div>
+
+    <div class="hero" style="margin-top:16px">
+      <div class="row" style="justify-content:space-between;align-items:flex-start">
+        <span style="font-size:40px;line-height:1" id="listEmoji">🛍️</span>
+        <span class="chip" id="listVisibility">privada</span>
+      </div>
+      <h1 class="display" style="margin-top:12px" id="listName">Mi haul</h1>
+      <div class="row" style="margin-top:14px;gap:16px">
+        <div><div class="kicker" style="opacity:.7">productos</div><b style="font-family:var(--display);font-size:24px" id="listCount">0</b></div>
+        <div><div class="kicker" style="opacity:.7">total</div><b style="font-family:var(--display);font-size:24px" id="listTotal">0 €</b></div>
+      </div>
+    </div>
+
+    <div class="pills" style="margin-top:16px" id="listFilters">
+      <button class="pill is-active" data-filter="all">Todo</button>
+      <button class="pill" data-filter="pending">Por comprar</button>
+      <button class="pill" data-filter="bought">Comprado</button>
+    </div>
+
+    <div class="products" id="productGrid"></div>
+
+    <div class="empty hidden" id="listEmpty">
+      <div class="empty__emoji">✦</div>
+      <h3 class="title">Lista vacía</h3>
+      <p class="lead" style="margin-top:8px">Añade lo primero que te apetezca: un enlace, un escaneo o una captura.</p>
+      <button class="btn btn--primary btn--block" style="margin-top:18px" data-action="add-item">Añadir producto</button>
+    </div>
+
+    <button class="fab" data-action="add-item" id="listFab" aria-label="Añadir producto">+</button>
+  </section>
+
+  <!-- ═══════════════════════════════ PERFIL ══════════════════════════════ -->
+  <section class="screen" id="screen-profile">
+    <div class="between">
+      <button class="iconbtn" data-action="goto-home" aria-label="Volver">←</button>
+      <span class="kicker muted">perfil</span>
+      <div style="width:46px"></div>
+    </div>
+
+    <div class="hero" style="margin-top:18px;--accent:var(--violet);--accent-ink:#fff">
+      <span style="font-size:40px" id="profileAvatar">😎</span>
+      <h1 class="display" style="margin-top:10px" id="profileTitle">Hola</h1>
+      <p class="small" style="margin-top:6px;opacity:.85">Sin registro. Tus listas viven en este dispositivo y en el enlace que compartes.</p>
+    </div>
+
+    <label class="field">
+      <span class="kicker">tu nombre</span>
+      <input class="input" id="profileName" placeholder="Ale" maxlength="24" autocomplete="nickname">
+    </label>
+
+    <div class="field">
+      <span class="kicker">tu avatar</span>
+      <div class="picker" id="avatarPicker"></div>
+    </div>
+
+    <div class="card" style="padding:16px;margin-top:22px">
+      <h3 class="title">Instala Haul</h3>
+      <p class="small muted" style="margin-top:6px">Añádela a tu pantalla de inicio y se abrirá como una app, a pantalla completa.</p>
+      <button class="btn btn--sm btn--block" style="margin-top:12px" id="btnInstall" data-action="install">Añadir a inicio</button>
+    </div>
+
+    <div class="stats" id="profileStats" style="margin-top:18px"></div>
+    <div class="spacer"></div>
+    <p class="small faint center" style="margin-top:18px">Haul v2 · hecho con mucho cariño</p>
+  </section>
+
+  <!-- ══════════════════════════════ SHEETS ═══════════════════════════════ -->
+  <div class="scrim" id="scrim" data-action="close-sheets"></div>
+
+  <!-- nueva lista / editar lista -->
+  <div class="sheet" id="sheet-list-form" role="dialog" aria-modal="true" aria-labelledby="listFormTitle">
+    <div class="sheet__grab"></div>
+    <h2 class="display" id="listFormTitle">Nueva lista</h2>
+    <label class="field">
+      <span class="kicker">nombre</span>
+      <input class="input" id="formListName" placeholder="Outfits de verano" maxlength="40">
+    </label>
+    <div class="field">
+      <span class="kicker">icono</span>
+      <div class="picker" id="emojiPicker"></div>
+    </div>
+    <div class="field">
+      <span class="kicker">color</span>
+      <div class="picker" id="themePicker"></div>
+    </div>
+    <div class="field">
+      <span class="kicker">quién puede verla</span>
+      <div class="seg" id="visibilitySeg">
+        <button data-visibility="private" class="is-active">🔒 Solo yo</button>
+        <button data-visibility="public">🌍 Con enlace</button>
+      </div>
+    </div>
+    <button class="btn btn--primary btn--block" style="margin-top:20px" id="btnSaveList">Crear lista</button>
+    <button class="btn btn--danger btn--block hidden" style="margin-top:10px" id="btnDeleteList">Eliminar lista</button>
+  </div>
+
+  <!-- añadir producto -->
+  <div class="sheet" id="sheet-add" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+    <div class="sheet__grab"></div>
+    <h2 class="display" id="addTitle">Añadir</h2>
+
+    <div class="seg" id="addTabs" style="margin-top:14px">
+      <button data-tab="link" class="is-active">🔗 Enlace</button>
+      <button data-tab="scan">📷 Escanear</button>
+      <button data-tab="shot">🖼️ Captura</button>
+    </div>
+
+    <!-- pestaña enlace -->
+    <div id="tab-link">
+      <label class="field">
+        <span class="kicker">pega la url del producto</span>
+        <div class="inputrow">
+          <input class="input" id="urlInput" placeholder="https://..." inputmode="url" autocomplete="off" spellcheck="false">
+          <button class="btn btn--sm" id="btnPaste">Pegar</button>
+        </div>
+      </label>
+      <button class="btn btn--primary btn--block" style="margin-top:12px" id="btnReadUrl">Leer producto</button>
+      <p class="small faint" style="margin-top:10px">Funciona con casi cualquier tienda. Si alguna se resiste, lo rellenas a mano en dos segundos.</p>
+    </div>
+
+    <!-- pestaña escanear -->
+    <div id="tab-scan" class="hidden">
+      <div class="scanner hidden" id="scannerBox">
+        <video id="scannerVideo" playsinline muted></video>
+        <div class="scanner__frame"></div>
+        <div class="scanner__laser"></div>
+        <div class="scanner__hint">apunta al código de barras</div>
+      </div>
+      <div id="scanIntro">
+        <div class="empty" style="margin-top:14px">
+          <div class="empty__emoji">📷</div>
+          <h3 class="title">Escanea en la tienda</h3>
+          <p class="lead" style="margin-top:8px">Apunta al código de barras o al QR de la etiqueta y lo buscamos por ti.</p>
+        </div>
+      </div>
+      <button class="btn btn--primary btn--block" style="margin-top:12px" id="btnScanToggle">Encender cámara</button>
+      <p class="small faint" style="margin-top:10px">La cámara solo se usa aquí, en tu móvil. No se sube ninguna imagen.</p>
+    </div>
+
+    <!-- pestaña captura -->
+    <div id="tab-shot" class="hidden">
+      <label class="drop" id="dropZone" for="shotInput">
+        <div class="empty__emoji" style="background:var(--cyan)">🖼️</div>
+        <h3 class="title">Sube una captura</h3>
+        <p class="lead" style="margin-top:8px">Leemos el QR, el texto y el precio de la imagen. La foto se queda como imagen del producto.</p>
+        <span class="chip chip--lime" style="margin-top:14px">elegir imagen</span>
+      </label>
+      <input type="file" id="shotInput" accept="image/*" class="hidden">
+      <div class="progress hidden" id="shotProgress"><span></span></div>
+      <p class="small faint" style="margin-top:10px">También puedes pegar una imagen del portapapeles con ⌘/Ctrl + V.</p>
+    </div>
+
+    <!-- estado común -->
+    <div class="loader hidden" id="addLoader">
+      <span class="loader__dot"></span><span class="loader__dot"></span><span class="loader__dot"></span>
+      <span class="small muted" id="addLoaderText">Leyendo la tienda…</span>
+    </div>
+    <div class="alert alert--error hidden" id="addError"></div>
+
+    <!-- vista previa editable -->
+    <div id="addPreview" class="hidden" style="margin-top:18px">
+      <div class="card" style="padding:13px">
+        <img class="preview__img" id="previewImg" alt="">
+        <label class="field">
+          <span class="kicker">nombre</span>
+          <input class="input" id="previewTitle" maxlength="120">
+        </label>
+        <div class="grid2" style="margin-top:14px">
+          <label>
+            <span class="kicker">precio</span>
+            <input class="input" id="previewPrice" placeholder="59,95 €" inputmode="decimal" style="margin-top:7px">
+          </label>
+          <label>
+            <span class="kicker">tienda</span>
+            <input class="input" id="previewShop" placeholder="Zara" style="margin-top:7px">
+          </label>
+        </div>
+        <label class="field">
+          <span class="kicker">nota (opcional)</span>
+          <input class="input" id="previewNote" placeholder="Talla M · para el finde" maxlength="120">
+        </label>
+        <button class="btn btn--primary btn--block" style="margin-top:16px" id="btnSaveItem">Guardar en la lista</button>
+      </div>
+    </div>
+
+    <button class="btn btn--ghost btn--block" style="margin-top:10px" id="btnManual">Añadirlo a mano</button>
+  </div>
+
+  <!-- detalle de producto -->
+  <div class="sheet" id="sheet-item" role="dialog" aria-modal="true">
+    <div class="sheet__grab"></div>
+    <img class="detail__img" id="itemImg" alt="">
+    <h2 class="display" style="margin-top:14px;font-size:28px" id="itemTitle">Producto</h2>
+    <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
+      <span class="chip chip--accent" id="itemPrice">—</span>
+      <span class="chip" id="itemShop">—</span>
+    </div>
+    <p class="lead hidden" style="margin-top:12px" id="itemNote"></p>
+    <a class="btn btn--block" style="margin-top:18px" id="itemLink" target="_blank" rel="noopener noreferrer">Abrir en la tienda ↗</a>
+    <div class="grid2" style="margin-top:10px">
+      <button class="btn btn--sm" id="btnToggleBought">✓ Comprado</button>
+      <button class="btn btn--sm btn--danger" id="btnDeleteItem">Eliminar</button>
+    </div>
+    <button class="btn btn--ghost btn--block" style="margin-top:8px" id="btnEditItem">Editar datos</button>
+  </div>
+
+  <!-- compartir -->
+  <div class="sheet" id="sheet-share" role="dialog" aria-modal="true">
+    <div class="sheet__grab"></div>
+    <h2 class="display">Compartir</h2>
+    <p class="lead" style="margin-top:8px" id="shareSummary">Tu lista, en un enlace.</p>
+
+    <div class="alert alert--info hidden" id="sharePrivateNote">
+      Esta lista es privada. Actívala como <b>“con enlace”</b> para que otros puedan abrirla.
+    </div>
+
+    <div class="qr" id="shareQr"></div>
+    <div class="linkbox" id="shareLink">—</div>
+    <div class="grid2" style="margin-top:12px">
+      <button class="btn btn--sm btn--primary" id="btnCopyLink">Copiar</button>
+      <button class="btn btn--sm" id="btnNativeShare">Compartir…</button>
+    </div>
+
+    <div class="card" style="padding:15px;margin-top:18px">
+      <div class="between">
+        <div class="grow">
+          <b>Que puedan añadir</b>
+          <div class="small muted" style="margin-top:3px">Cualquiera con el enlace podrá sumar productos a esta lista.</div>
+        </div>
+        <button class="iconbtn" id="btnToggleContrib" aria-pressed="false">○</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════════════════════════════ NAVEGACIÓN ════════════════════════════ -->
+  <nav class="nav" id="nav">
+    <button data-nav="home" class="is-active"><b>⌂</b>Hauls</button>
+    <button data-nav="add"><b>＋</b>Añadir</button>
+    <button data-nav="profile"><b>◉</b>Perfil</button>
+  </nav>
+
+  <div class="toast" id="toast"><span class="grow" id="toastText"></span><button id="toastAction" class="hidden">Deshacer</button></div>
+</div>
+
+<script src="/app.js" type="module"></script>
+</body>
+</html>
