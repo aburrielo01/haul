@@ -130,6 +130,7 @@ async function api(path, { method = 'GET', body, slug } = {}) {
     const err = new Error(data.message || 'Algo ha fallado. Inténtalo otra vez.');
     err.code = data.code;
     err.status = res.status;
+    err.data = data;
     throw err;
   }
   return data;
@@ -444,16 +445,35 @@ async function tryClipboard() {
   } catch { /* sin permiso: el usuario pega a mano */ }
 }
 
-function showAddError(message) {
+function showAddError(message, { offerShot = true, hint = '' } = {}) {
   const box = $('#addError');
-  box.innerHTML = `${esc(message)}<br><span class="small">Puedes añadirlo a mano y seguir.</span>`;
+  box.innerHTML =
+    `<b>${esc(message)}</b>` +
+    (hint ? `<div class="small" style="margin-top:6px">${esc(hint)}</div>` : '') +
+    (offerShot
+      ? `<button class="btn btn--sm" style="margin-top:12px" data-goto-shot>📸 Hacer una captura</button>`
+      : '');
   box.classList.remove('hidden');
+  box.querySelector('[data-goto-shot]')?.addEventListener('click', () => {
+    setTab('shot');
+    $('#shotInput').click();
+  });
 }
 
+/** Mientras se lee una tienda lenta, contar qué está pasando. */
+let loaderTimers = [];
 function setLoading(on, text = 'Leyendo la tienda…') {
+  loaderTimers.forEach(clearTimeout);
+  loaderTimers = [];
   $('#addLoaderText').textContent = text;
   $('#addLoader').classList.toggle('hidden', !on);
-  if (on) $('#addError').classList.add('hidden');
+  if (!on) return;
+  $('#addError').classList.add('hidden');
+  if (text !== 'Leyendo la tienda…') return;
+  loaderTimers.push(
+    setTimeout(() => { $('#addLoaderText').textContent = 'Abriendo la ficha del producto…'; }, 4000),
+    setTimeout(() => { $('#addLoaderText').textContent = 'Esta tienda va lenta, aguanta…'; }, 11000)
+  );
 }
 
 async function readUrl() {
@@ -465,8 +485,22 @@ async function readUrl() {
     const data = await api('/extract', { method: 'POST', body: { url } });
     showPreview({ ...data, source: 'url', url: data.url || url });
   } catch (err) {
-    showAddError(err.message);
-    showPreview({ title: '', url, image: '', priceText: '', shop: hostOf(url), source: 'url' });
+    // Aunque la tienda nos cierre la puerta, del propio enlace se saca
+    // el nombre y la tienda: así el formulario no empieza vacío.
+    const fb = (err.data && err.data.fallback) || {};
+    const blocked = err.code === 'BLOCKED';
+    showAddError(
+      blocked ? `${fb.shop || 'Esta tienda'} no deja que otras apps lean sus fichas` : err.message,
+      { hint: 'Haz una captura de la ficha y la usamos como foto del producto. El precio lo lee sola.' }
+    );
+    showPreview({
+      title: fb.title || '',
+      url: fb.url || url,
+      image: '',
+      priceText: '',
+      shop: fb.shop || hostOf(url),
+      source: 'url',
+    });
   } finally {
     setLoading(false);
   }
@@ -481,8 +515,10 @@ function hostOf(url) {
 
 function showPreview(data) {
   session.pending = data;
-  $('#previewImg').src = data.image ? imgSrc(data.image) : placeholderImg();
-  $('#previewImg').onerror = function () { this.src = placeholderImg(); };
+  const img = $('#previewImg');
+  img.src = data.image ? imgSrc(data.image) : placeholderImg();
+  img.classList.toggle('preview__img--empty', !data.image);
+  img.onerror = function () { this.src = placeholderImg(); this.classList.add('preview__img--empty'); };
   $('#previewTitle').value = data.title || '';
   $('#previewPrice').value = data.priceText || '';
   $('#previewShop').value = data.shop || '';
@@ -494,8 +530,23 @@ function showPreview(data) {
 
 function placeholderImg() {
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"><rect width="100%" height="100%" fill="#f1ecfb"/><text x="50%" y="52%" font-family="monospace" font-size="34" text-anchor="middle" fill="#8e88a0">sin foto</text></svg>`
+    `<svg xmlns="http://www.w3.org/2000/svg" width="780" height="300"><rect width="100%" height="100%" fill="#f1ecfb"/><text x="50%" y="56%" font-family="monospace" font-size="30" text-anchor="middle" fill="#6f6889">＋ toca para añadir foto</text></svg>`
   );
+}
+
+/** Cambia solo la foto del producto, sin tocar lo que ya se haya escrito. */
+async function attachPhoto(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  try {
+    const shot = await downscale(file);
+    session.pending = { ...(session.pending || {}), image: shot.dataUrl };
+    const img = $('#previewImg');
+    img.src = shot.dataUrl;
+    img.classList.remove('preview__img--empty');
+    buzz(14);
+  } catch {
+    toast('No hemos podido leer esa imagen');
+  }
 }
 
 async function saveItem() {
@@ -637,6 +688,14 @@ function guessFromText(text) {
 
 async function handleShot(file) {
   if (!file || !file.type.startsWith('image/')) return;
+  // Si ya había una vista previa abierta (por ejemplo con el nombre sacado del
+  // enlace), lo escrito manda sobre lo que adivine el OCR.
+  const keep = $('#addPreview').classList.contains('hidden') ? {} : {
+    title: $('#previewTitle').value.trim(),
+    shop: $('#previewShop').value.trim(),
+    price: $('#previewPrice').value.trim(),
+    url: session.pending?.url || '',
+  };
   const bar = $('#shotProgress');
   const fill = bar.querySelector('span');
   bar.classList.remove('hidden');
@@ -687,11 +746,11 @@ async function handleShot(file) {
   bar.classList.add('hidden');
   setLoading(false);
   showPreview({
-    title: guess.title,
-    priceText: guess.priceText,
-    shop: '',
+    title: keep.title || guess.title,
+    priceText: keep.price || guess.priceText,
+    shop: keep.shop || '',
     image: shot.dataUrl,
-    url: guess.url,
+    url: keep.url || guess.url,
     source: 'shot',
   });
   toast(guess.title || guess.priceText ? 'Datos leídos de la captura' : 'Revisa los datos y guarda');
@@ -918,6 +977,8 @@ $('#btnManual').addEventListener('click', () => {
 $('#btnSaveItem').addEventListener('click', saveItem);
 $('#btnScanToggle').addEventListener('click', () => (session.scanner ? stopScanner() : startScanner()));
 $('#shotInput').addEventListener('change', (e) => handleShot(e.target.files[0]));
+$('#previewImg').addEventListener('click', () => $('#photoInput').click());
+$('#photoInput').addEventListener('change', (e) => attachPhoto(e.target.files[0]));
 
 ['dragover', 'dragenter'].forEach((t) => $('#dropZone').addEventListener(t, (e) => {
   e.preventDefault(); $('#dropZone').classList.add('is-hot');

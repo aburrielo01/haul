@@ -117,7 +117,12 @@ async function loadList(req, res) {
 
 /* ----------------------------------------------------------------- API */
 
-app.get('/api/health', async (_req, res) => res.json({ ok: true, time: Date.now() }));
+// `unlocker` dice si el desbloqueador está configurado, sin revelar la clave
+app.get('/api/health', async (_req, res) => res.json({
+  ok: true,
+  time: Date.now(),
+  unlocker: extract.unlockerEnabled(),
+}));
 
 // Crear lista
 app.post('/api/lists', limitWrite, async (req, res) => {
@@ -287,12 +292,22 @@ app.post('/api/extract', limitExtract, async (req, res) => {
     await db.cacheSet(key, data, 1000 * 60 * 60 * 6).catch(() => {});
     res.json(data);
   } catch (err) {
-    const blocked = err.code === 'BLOCKED';
-    console.error('extract', url, err.message);
+    // El detalle técnico se queda en los logs: al usuario nunca le sirve de nada
+    // y una traza de error en pantalla da sensación de app rota.
+    console.error('extract', url, err && err.message);
+    const blocked = err && err.code === 'BLOCKED';
     res.status(blocked ? 422 : 502).json({
       ok: false,
-      code: err.code || 'EXTRACT_FAILED',
-      message: err.message || 'No hemos podido leer esa tienda. Añádelo a mano y listo.',
+      code: blocked ? 'BLOCKED' : 'EXTRACT_FAILED',
+      message: blocked
+        ? 'Esta tienda no deja que otras apps lean sus fichas.'
+        : 'No hemos podido leer esta página.',
+      // lo poco que se puede deducir del propio enlace, para no partir de cero
+      fallback: (err && err.fallback) || {
+        url: extract.cleanUrl(url),
+        title: extract.titleFromSlug(url),
+        shop: extract.shopFromUrl(url),
+      },
     });
   }
 });

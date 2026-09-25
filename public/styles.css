@@ -828,7 +828,10 @@ img { max-width: 100%; display: block; }
   background: #f1ecfb;
   border: 2px solid var(--ink);
   border-radius: var(--r-md);
+  cursor: pointer;
 }
+/* sin foto no merece media pantalla: una banda y a otra cosa */
+.preview__img--empty { aspect-ratio: 2.6; border-style: dashed; }
 
 .detail__img {
   width: 100%;
