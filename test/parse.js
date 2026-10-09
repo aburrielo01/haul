@@ -2,7 +2,7 @@
 /** Pruebas del parseador: precios en distintos formatos y lectura de fichas. */
 
 const assert = require('assert');
-const { parsePrice, isValidEan, cleanUrl, shopFromUrl } = require('../lib/extract');
+const { parsePrice, isValidEan, cleanUrl, shopFromUrl, titleFromSlug } = require('../lib/extract');
 
 let passed = 0;
 function ok(name, fn) {
@@ -43,6 +43,31 @@ ok('limpia parámetros de seguimiento', () => {
 });
 ok('deduce el nombre de la tienda', () => {
   assert.strictEqual(shopFromUrl('https://www.zara.com/es/x'), 'Zara');
+});
+
+/* Cuando la tienda nos bloquea, el nombre sale del propio enlace. */
+ok('saca el nombre del enlace de Zara', () => {
+  assert.strictEqual(
+    titleFromSlug('https://www.zara.com/es/es/chaqueta-vaquera-oversize-p05575046.html'),
+    'Chaqueta vaquera oversize');
+});
+ok('saca el nombre del enlace de Vans', () => {
+  assert.strictEqual(
+    titleFromSlug('https://www.vans.com/es-es/p/zapatillas-old-skool-VN000D3HY28'),
+    'Zapatillas old skool');
+});
+ok('saca el nombre de una ficha de NFL Shop', () => {
+  assert.strictEqual(
+    titleFromSlug('https://europe.nflshop.com/en/kansas-city-chiefs-nike-game-jersey/p-8420953'),
+    'Kansas city chiefs nike game jersey');
+});
+ok('respeta las mayúsculas de un modelo', () => {
+  assert.strictEqual(
+    titleFromSlug('https://www.amazon.es/Sony-WH-1000XM5-Auriculares-Inalambricos/dp/B09XS7JWHH'),
+    'Sony WH 1000XM5 Auriculares Inalambricos');
+});
+ok('no inventa nombre cuando el enlace no dice nada', () => {
+  assert.strictEqual(titleFromSlug('https://tienda.com/p/98765'), '');
 });
 
 console.log(`\n${passed} correctas\n`);

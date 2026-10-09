@@ -11,6 +11,7 @@ const path = require('path');
 const fs = require('fs');
 const db = require('./lib/db');
 const extract = require('./lib/extract');
+const bench = require('./lib/bench');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -312,6 +313,100 @@ app.post('/api/extract', limitExtract, async (req, res) => {
   }
 });
 
+/**
+ * Diagnóstico de una URL: qué ve cada intento del lector. Protegido con
+ * DIAG_TOKEN para que nadie gaste créditos del desbloqueador por deporte.
+ *   /api/diagnose?url=https://...&key=TU_DIAG_TOKEN
+ */
+app.get('/api/diagnose', limitExtract, async (req, res) => {
+  const token = process.env.DIAG_TOKEN || '';
+  if (!token) return fail(res, 404, 'Diagnóstico desactivado');
+  const key = String(req.get('x-diag-token') || req.query.key || '');
+  if (key !== token) return fail(res, 403, 'Clave de diagnóstico incorrecta');
+  const url = String(req.query.url || '').trim();
+  if (!url) return fail(res, 400, 'Falta el parámetro url');
+  try {
+    res.json({ ok: true, ...(await extract.diagnose(url)) });
+  } catch (err) {
+    res.status(400).json({ ok: false, message: err.message });
+  }
+});
+
+/* ---------------------------------------------------------- banco de pruebas */
+
+function diagAuth(req, res) {
+  const token = process.env.DIAG_TOKEN || '';
+  if (!token) { fail(res, 404, 'Diagnóstico desactivado'); return false; }
+  const key = String(req.get('x-diag-token') || req.query.key || '');
+  if (key !== token) { fail(res, 403, 'Clave de diagnóstico incorrecta'); return false; }
+  return true;
+}
+
+// Lanza el banco: /api/bench/run?key=…[&shop=Zara][&limit=10][&ids=E001,E002]
+app.get('/api/bench/run', async (req, res) => {
+  if (!diagAuth(req, res)) return;
+  const filter = {};
+  if (req.query.shop) filter.shop = String(req.query.shop);
+  if (req.query.limit) filter.limit = Math.max(1, Number(req.query.limit) || 0);
+  if (req.query.ids) filter.ids = String(req.query.ids).split(',').map((x) => x.trim()).filter(Boolean);
+  try {
+    const out = await bench.run({ db, extract: extract.extractFromUrl, filter });
+    res.json({ ok: true, ...out });
+  } catch (err) {
+    fail(res, 500, err.message);
+  }
+});
+
+// Informe: /api/bench/report?key=…  (añade &html=1 para verlo en el navegador)
+app.get('/api/bench/report', async (req, res) => {
+  if (!diagAuth(req, res)) return;
+  const state = await bench.report(db);
+  if (!req.query.html) return res.json({ ok: true, ...state });
+  res.type('html').send(renderBenchHtml(state));
+});
+
+function renderBenchHtml(state) {
+  const s = state.summary || state.partial;
+  const pct = (n) => `${n}%`;
+  const rows = (state.rows || []).map((r) => {
+    const g = r.grade;
+    const cell = (v) => v ? '<td class="ok">✓</td>' : '<td class="ko">✗</td>';
+    return `<tr>
+      <td>${esc(r.id)}</td><td>${esc(r.shop)}</td>
+      ${cell(g.title)}${cell(g.price)}${cell(g.image)}
+      <td>${esc(g.mode || '')}</td>
+      <td class="small">${esc(g.got ? g.got.title : (g.error || ''))}</td>
+      <td class="small">${esc(g.got ? g.got.priceText : '')}${g.priceDiff ? ` <i>(±${g.priceDiff})</i>` : ''}</td>
+      <td class="small">${esc(r.expected.title)} · ${esc(r.expected.price)}</td>
+      <td class="small">${Math.round(r.ms / 100) / 10}s</td>
+    </tr>`;
+  }).join('');
+  const shops = s ? s.byShop.map((x) => `<tr><td>${esc(x.shop)}</td><td>${x.ok}/${x.total}</td></tr>`).join('') : '';
+  return `<!doctype html><meta charset="utf-8"><title>Banco de pruebas · Haul</title>
+<style>
+body{font-family:ui-sans-serif,system-ui,sans-serif;margin:24px;color:#111113;background:#fbfbfd}
+h1{font-size:28px;letter-spacing:-.03em;margin:0 0 4px}.sub{color:#6b6b78;margin-bottom:20px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:16px 0 24px}
+.kpi{border:1px solid #e2e1e8;background:#fff;padding:12px}.kpi b{display:block;font-size:26px;letter-spacing:-.03em}.kpi span{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8b8f9a}
+table{border-collapse:collapse;width:100%;font-size:13px;background:#fff}th,td{border-bottom:1px solid #e2e1e8;padding:7px 9px;text-align:left;vertical-align:top}
+th{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b8f9a}.ok{color:#1a8f3a;font-weight:700}.ko{color:#d6362a;font-weight:700}.small{font-size:12px;color:#4a4f5a;max-width:260px}
+.two{display:grid;grid-template-columns:1fr 3fr;gap:24px;align-items:start}@media(max-width:800px){.two{grid-template-columns:1fr}}
+</style>
+<h1>Banco de pruebas</h1>
+<div class="sub">Estado: <b>${esc(state.status)}</b> · ${state.done || 0}/${state.total || 0} enlaces${state.startedAt ? ' · ' + new Date(state.startedAt).toLocaleString('es-ES') : ''}</div>
+${s ? `<div class="kpis">
+  <div class="kpi"><b>${pct(s.pctOk)}</b><span>captura completa</span></div>
+  <div class="kpi"><b>${pct(s.pctTitle)}</b><span>nombre</span></div>
+  <div class="kpi"><b>${pct(s.pctPrice)}</b><span>precio</span></div>
+  <div class="kpi"><b>${pct(s.pctImage)}</b><span>foto</span></div>
+  <div class="kpi"><b>${s.failed}</b><span>errores</span></div>
+</div>` : '<p>Todavía no hay resultados.</p>'}
+<div class="two">
+  <div><h3>Por tienda</h3><table><tr><th>tienda</th><th>ok</th></tr>${shops}</table></div>
+  <div><h3>Detalle</h3><table><tr><th>id</th><th>tienda</th><th>nombre</th><th>precio</th><th>foto</th><th>vía</th><th>leído</th><th>precio leído</th><th>esperado</th><th>t</th></tr>${rows}</table></div>
+</div>`;
+}
+
 // Buscar por código de barras / QR
 app.get('/api/barcode/:code', limitExtract, async (req, res) => {
   const code = String(req.params.code || '');
@@ -374,9 +469,50 @@ const esc = (s) => String(s || '').replace(/[&<>"']/g, (m) => (
 ));
 
 /**
- * La página de una lista compartida se sirve con sus propias meta etiquetas,
- * para que al pegar el enlace en WhatsApp o Instagram salga una tarjeta bonita.
+ * Una página compartida se sirve con sus propias meta etiquetas, para que al
+ * pegar el enlace en WhatsApp o Instagram salga una tarjeta con su foto.
  */
+async function renderIndexWithMeta({ title, desc, image, url }) {
+  const html = await fs.promises.readFile(INDEX_FILE, 'utf8');
+  return html.replace('<!--META-->', [
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:title" content="${esc(title)}">`,
+    `<meta property="og:description" content="${esc(desc)}">`,
+    `<meta property="og:image" content="${esc(image)}">`,
+    `<meta property="og:url" content="${esc(url)}">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:title" content="${esc(title)}">`,
+    `<meta name="twitter:description" content="${esc(desc)}">`,
+    `<meta name="twitter:image" content="${esc(image)}">`,
+  ].join('\n'));
+}
+
+/** Enlace de una pieza suelta: su propia tarjeta de previsualización. */
+app.get('/l/:slug/p/:id', async (req, res, next) => {
+  try {
+    const list = await db.getListBySlug(req.params.slug);
+    if (!list || list.visibility !== 'public') return next();
+    const items = await db.listItems(list.id);
+    const item = items.find((i) => i.id === req.params.id);
+    if (!item) return next();
+    const origin = `${req.protocol}://${req.get('host')}`;
+    const desc = [item.price_text, item.shop].filter(Boolean).join(' · ')
+      || `Guardado en ${list.name}`;
+    const image = item.image
+      ? (item.image.startsWith('data:') ? `${origin}/icons/og.png` : `${origin}/api/img?u=${encodeURIComponent(item.image)}`)
+      : `${origin}/icons/og.png`;
+    res.setHeader('Cache-Control', 'no-cache');
+    res.type('html').send(await renderIndexWithMeta({
+      title: `${item.title} · Haul`,
+      desc,
+      image,
+      url: `${origin}/l/${list.slug}/p/${item.id}`,
+    }));
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get('/l/:slug', async (req, res, next) => {
   try {
     const list = await db.getListBySlug(req.params.slug);
@@ -389,29 +525,22 @@ app.get('/l/:slug', async (req, res, next) => {
     const desc = count
       ? `${count} producto${count === 1 ? '' : 's'} guardado${count === 1 ? '' : 's'}${list.owner_name ? ` por ${list.owner_name}` : ''}.`
       : 'Una lista recién creada en Haul.';
-    const image = cover ? `${origin}/api/img?u=${encodeURIComponent(cover)}` : `${origin}/icons/og.png`;
+    const image = cover && !cover.startsWith('data:')
+      ? `${origin}/api/img?u=${encodeURIComponent(cover)}`
+      : `${origin}/icons/og.png`;
 
-    let html = await fs.promises.readFile(INDEX_FILE, 'utf8');
-    html = html.replace(
-      '<!--META-->',
-      [
-        `<meta property="og:type" content="website">`,
-        `<meta property="og:title" content="${esc(title)}">`,
-        `<meta property="og:description" content="${esc(desc)}">`,
-        `<meta property="og:image" content="${esc(image)}">`,
-        `<meta property="og:url" content="${esc(origin)}/l/${esc(list.slug)}">`,
-        `<meta name="twitter:card" content="summary_large_image">`,
-        `<meta name="twitter:title" content="${esc(title)}">`,
-        `<meta name="twitter:description" content="${esc(desc)}">`,
-        `<meta name="twitter:image" content="${esc(image)}">`,
-      ].join('\n')
-    );
     res.setHeader('Cache-Control', 'no-cache');
-    res.type('html').send(html);
+    res.type('html').send(await renderIndexWithMeta({
+      title, desc, image, url: `${origin}/l/${list.slug}`,
+    }));
   } catch (err) {
     next(err);
   }
 });
+
+// El "compartir con Haul" lo atiende el service worker. Si todavía no está
+// activo (primera visita), la petición llega aquí: abrimos la app sin más.
+app.post('/share', (_req, res) => res.redirect(303, '/'));
 
 app.get('*', (_req, res) => res.sendFile(INDEX_FILE));
 

@@ -1,6 +1,6 @@
 {
   "name": "haul",
-  "version": "2.3.0",
+  "version": "3.2.0",
   "private": true,
   "description": "Haul — guarda, organiza y comparte todo lo que quieres comprar",
   "main": "server.js",
@@ -13,7 +13,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "better-sqlite3": "^12.4.1",
+    "better-sqlite3": "^11.10.0",
     "cheerio": "^1.0.0",
     "express": "^4.21.2",
     "pg": "^8.13.1",

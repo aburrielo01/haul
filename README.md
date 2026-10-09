@@ -25,6 +25,7 @@ directamente a Haul.
 server.js              API REST, páginas y estáticos
 lib/db.js              datos (SQLite o Postgres, misma API)
 lib/extract.js         extracción de producto, precios, códigos de barras
+lib/adapters.js        adaptadores por tienda (Amazon, Zalando, El Corte Inglés…)
 public/index.html      todas las pantallas de la app
 public/styles.css      sistema visual
 public/app.js          lógica de la interfaz
@@ -32,11 +33,25 @@ public/sw.js           service worker (abre sin conexión)
 test/smoke.js          ciclo completo de una lista vía API
 test/parse.js          precios, EAN, nombres desde la URL
 test/unlocker.js       desbloqueador, contra un servidor falso
+test/adapters.js       adaptadores y elección del precio correcto
+lib/bench.js           banco de pruebas: lee test/bench-urls.json y compara con la hoja de verdad
+test/bench-urls.json   los 100 enlaces del banco con nombre y precio esperados
 ```
 
 **Sin cuentas.** Al crear una lista el servidor devuelve un `ownerToken` que se guarda
 solo en el móvil. Ese token es lo que permite editarla. El enlace público no lo lleva,
 así que compartir una lista nunca da permisos de edición.
+
+**Compartir implica poder ver.** Las listas nacen privadas, pero al copiar o enviar el
+enlace se activan solas como públicas. Antes el enlace llegaba y la otra persona se
+quedaba en la pantalla de inicio sin entender nada; ahora, si una lista sigue siendo
+privada, quien la abre ve una pantalla que lo explica y un botón para reintentar.
+
+**Compartir *con* Haul.** El service worker atiende el `share_target`: desde otra app
+se puede mandar a Haul un enlace, texto o una imagen —Zalando comparte sus productos
+como foto— y la app abre el formulario con eso ya cargado. En Android funciona el
+compartir del sistema; en iPhone, que todavía no lo admite, está el botón
+*Pegar imagen copiada* dentro de la pestaña Captura.
 
 ## Ponerlo en marcha
 
@@ -76,6 +91,7 @@ node test/unlocker.js              # desbloqueador, contra un servidor falso
 | `BRIGHTDATA_UNLOCKER_ZONE` | Nombre de la zona Web Unlocker | — |
 | `UNLOCKER_COUNTRY` | País desde el que se leen las tiendas | `es` |
 | `UNLOCKER_DAILY_LIMIT` | Tope diario de peticiones de pago | `150` |
+| `DIAG_TOKEN` | Activa `/api/diagnose` (ver abajo) | — |
 
 ## Tiendas con protección anti-bot
 
@@ -105,6 +121,39 @@ comparadores, pero es una decisión de negocio, no técnica.
 
 Si no se activa, fallar sigue costando diez segundos: el nombre y la tienda
 salen del propio enlace y la app ofrece completar el producto con una captura.
+
+## Cuando una tienda falla: diagnóstico
+
+Con `DIAG_TOKEN` definido en Render, esta URL cuenta qué ha visto cada intento del
+lector sobre una ficha, con tiempos y sin volcar HTML:
+
+```
+https://TU-APP.onrender.com/api/diagnose?url=https://tienda.com/producto&key=TU_DIAG_TOKEN
+```
+
+Pégalo tal cual en una conversación de soporte. Ahorra media hora de adivinar.
+
+## Banco de pruebas
+
+Mide qué porcentaje de los enlaces de `test/bench-urls.json` se leen bien (nombre,
+precio y foto). Corre en segundo plano en el servidor y guarda el estado en la base de
+datos. Con `DIAG_TOKEN` definido:
+
+```
+/api/bench/run?key=TU_DIAG_TOKEN            lanza los 100 (acepta &shop=Zara, &limit=10, &ids=E001,E002)
+/api/bench/report?key=TU_DIAG_TOKEN&html=1  informe en el navegador; sin html=1 devuelve JSON
+```
+
+Para añadir enlaces, filas nuevas en el JSON (id, shop, url, title, price, currency).
+
+## Adaptadores por tienda
+
+Las grandes tiendas no publican datos estructurados y hay que ir a por sus propias
+etiquetas. `lib/adapters.js` tiene uno por tienda; cada uno lee solo lo que sabe
+leer mejor que el genérico. Para añadir una tienda, una entrada más con su `match`
+y su `read`. Amazon, por ejemplo: título en `#productTitle`, precio actual dentro
+del bloque de compra (nunca el tachado ni el precio por unidad) y foto en
+`data-old-hires`.
 
 ## Decisiones que conviene conocer
 

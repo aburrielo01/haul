@@ -5,9 +5,9 @@
    ========================================================================== */
 
 const STORE_KEY = 'haul.v2';
-const EMOJIS = ['🛍️', '👟', '👗', '💄', '🎧', '🛋️', '🎮', '📚', '🍿', '🎁', '✨', '🏷️'];
+const EMOJIS = ['✶', '👟', '👗', '💄', '🎧', '🛋️', '🎮', '📚', '🍿', '🎁', '✣', '▣'];
 const AVATARS = ['😎', '🦋', '👽', '🐰', '🔥', '🫧', '🍒', '⭐️', '🎀', '🧊'];
-const THEMES = ['pink', 'lime', 'cyan', 'violet', 'sun', 'tangerine'];
+const THEMES = ['sky', 'lime', 'lavender', 'coral', 'sun', 'ink'];
 
 const CDN = {
   zxing: 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js',
@@ -147,6 +147,7 @@ const session = {
   editingItem: null,
   listFormMode: 'create',
   collabToken: '',  // token recibido por enlace de colaboración
+  sharingItem: null,// producto concreto que se está compartiendo
   scanner: null,
   deferredInstall: null,
 };
@@ -205,7 +206,7 @@ function renderHome() {
   const total = lists.reduce((n, l) => n + (l.total || 0), 0);
 
   const name = store.data.profile.name;
-  $('#homeGreeting').textContent = name ? `HOLA, ${name.toUpperCase()}` : 'TUS HAULS';
+  $('#homeGreeting').textContent = name ? `de ${name}` : 'archivo';
 
   $('#homeStats').innerHTML = `
     <div class="stat"><b>${lists.length}</b><span>listas</span></div>
@@ -249,6 +250,7 @@ function renderList() {
   $('#listName').textContent = list.name;
   $('#listVisibility').textContent = list.visibility === 'public' ? '🌍 con enlace' : '🔒 solo yo';
   $('#listCount').textContent = list.items.length;
+  $('#listRef').textContent = 'ref · ' + list.slug.slice(-5).toUpperCase();
 
   const total = sumTotal(list.items);
   $('#listTotal').textContent = total.value ? money(total.value, total.currency) : '—';
@@ -274,7 +276,10 @@ function renderList() {
     session.filter === 'all' ? true : session.filter === 'bought' ? it.bought : !it.bought
   );
   $('#listEmpty').classList.toggle('hidden', visible.length > 0);
-  $('#productGrid').innerHTML = visible.map(productCard).join('');
+  $('#productGrid').innerHTML = visible.map(productCard).join('')
+    + (visible.length && canAdd
+      ? `<button class="addcard" data-action="add-item"><b>¿Otra pieza?</b><span>pega enlace o captura</span></button>`
+      : '');
   $$('#listFilters .pill').forEach((p) => p.classList.toggle('is-active', p.dataset.filter === session.filter));
 }
 
@@ -316,7 +321,18 @@ function renderProfile() {
 
 /* --------------------------------------------------------- abrir lista */
 
-async function openList(slug, { push = true } = {}) {
+/** Pantalla de aviso cuando un enlace no se puede abrir. */
+function showGate({ emoji, title, text, action }) {
+  $('#gateEmoji').textContent = emoji;
+  $('#gateTitle').textContent = title;
+  $('#gateText').textContent = text;
+  const btn = $('#gateAction');
+  btn.classList.toggle('hidden', !action);
+  if (action) { btn.textContent = action.label; btn.onclick = action.run; }
+  goto('gate', { push: false });
+}
+
+async function openList(slug, { push = true, attempt = 0 } = {}) {
   try {
     const { list } = await api(`/lists/${encodeURIComponent(slug)}`, { slug });
     session.list = list;
@@ -325,9 +341,38 @@ async function openList(slug, { push = true } = {}) {
     renderList();
     goto('list', { push });
   } catch (err) {
-    if (err.status === 403) toast('Esa lista es privada 🔒');
-    else if (err.status === 404) { store.removeList(slug); toast('Esa lista ya no existe'); goto('home'); }
-    else toast(err.message);
+    // Una lista privada daba antes un aviso que se perdía: quien abría el
+    // enlace se quedaba en la pantalla de inicio sin saber por qué.
+    if (err.status === 403) {
+      return showGate({
+        emoji: '🔒',
+        title: 'Esta lista es privada',
+        text: 'Quien la creó tiene que abrir Compartir y activar el enlace. Avísale y vuelve a intentarlo.',
+        action: { label: 'Reintentar', run: () => openList(slug, { push: false }) },
+      });
+    }
+    if (err.status === 404) {
+      store.removeList(slug);
+      return showGate({
+        emoji: '🫥',
+        title: 'Esta lista ya no existe',
+        text: 'El enlace es correcto, pero la lista se ha borrado.',
+        action: { label: 'Ir a mis hauls', run: () => goto('home') },
+      });
+    }
+    // Fallo de red: en el plan gratuito el servidor se duerme y tarda
+    // alrededor de un minuto en despertar en la primera visita.
+    if (attempt < 2) {
+      showGate({ emoji: '😴', title: 'Despertando el servidor', text: 'La primera visita del día tarda un poco. Seguimos intentándolo…' });
+      await sleep(3500 * (attempt + 1));
+      return openList(slug, { push, attempt: attempt + 1 });
+    }
+    showGate({
+      emoji: '📡',
+      title: 'No hemos podido conectar',
+      text: 'Comprueba tu conexión y vuelve a intentarlo.',
+      action: { label: 'Reintentar', run: () => openList(slug, { push: false }) },
+    });
   }
 }
 
@@ -834,18 +879,27 @@ function editItem() {
 
 /* ------------------------------------------------------------ compartir */
 
-async function openShare() {
+/**
+ * Compartir la lista entera o un solo producto. El enlace de producto abre
+ * directamente su tarjeta, sin que el otro tenga que buscarlo en la lista.
+ */
+async function openShare({ item = null } = {}) {
   const list = session.list;
   if (!list) return;
-  const url = `${location.origin}/l/${list.slug}`;
-  $('#shareSummary').textContent = `${list.items.length} producto${list.items.length === 1 ? '' : 's'} · ${list.name}`;
+  session.sharingItem = item;
+
+  const url = item
+    ? `${location.origin}/l/${list.slug}/p/${item.id}`
+    : `${location.origin}/l/${list.slug}`;
+
+  $('#shareTitle').textContent = item ? 'Compartir pieza' : 'Compartir';
+  $('#shareSummary').textContent = item
+    ? `${item.title}${item.priceText ? ' · ' + item.priceText : ''}`
+    : `${list.items.length} producto${list.items.length === 1 ? '' : 's'} · ${list.name}`;
   $('#shareLink').textContent = url;
   $('#sharePrivateNote').classList.toggle('hidden', list.visibility === 'public');
-  const btn = $('#btnToggleContrib');
-  btn.textContent = list.allowContrib ? '●' : '○';
-  btn.classList.toggle('iconbtn--accent', !!list.allowContrib);
-  btn.setAttribute('aria-pressed', String(!!list.allowContrib));
-  btn.parentElement.parentElement.classList.toggle('hidden', list.role !== 'owner');
+  $('#shareContribBox').classList.toggle('hidden', list.role !== 'owner' || !!item);
+  refreshShareSheet();
   openSheet('sheet-share');
 
   const box = $('#shareQr');
@@ -853,14 +907,44 @@ async function openShare() {
   try {
     await loadScript(CDN.qrcode);
     const canvas = document.createElement('canvas');
-    await window.QRCode.toCanvas(canvas, url, { width: 320, margin: 1, color: { dark: '#0d0b14', light: '#ffffff' } });
+    await window.QRCode.toCanvas(canvas, url, { width: 320, margin: 1, color: { dark: '#111113', light: '#ffffff' } });
     box.appendChild(canvas);
   } catch {
     box.innerHTML = '<span class="small faint">QR no disponible sin conexión</span>';
   }
 }
 
+function refreshShareSheet() {
+  const list = session.list;
+  if (!list) return;
+  $('#sharePrivateNote').classList.toggle('hidden', list.visibility === 'public');
+  const btn = $('#btnToggleContrib');
+  btn.textContent = list.allowContrib ? '●' : '○';
+  btn.classList.toggle('iconbtn--accent', !!list.allowContrib);
+}
+
+/**
+ * Compartir implica poder ver. Si la lista sigue siendo privada, al copiar o
+ * enviar el enlace se activa sola: antes el enlace llegaba roto y quien lo
+ * abría no entendía por qué. No se espera a que termine para no perder el
+ * gesto del usuario, que en iOS es lo que permite abrir el menú de compartir.
+ */
+function publishIfNeeded() {
+  const list = session.list;
+  if (!list || list.role !== 'owner' || list.visibility === 'public') return;
+  api(`/lists/${list.slug}`, { method: 'PATCH', slug: list.slug, body: { visibility: 'public' } })
+    .then((res) => {
+      session.list = res.list;
+      store.syncList(res.list);
+      renderList();
+      refreshShareSheet();
+      toast('Enlace activado: ya pueden verla ✦');
+    })
+    .catch((err) => toast(err.message));
+}
+
 async function copyLink() {
+  publishIfNeeded();
   const text = $('#shareLink').textContent;
   try { await navigator.clipboard.writeText(text); toast('Enlace copiado ✦'); }
   catch { toast('Mantén pulsado el enlace para copiarlo'); }
@@ -868,8 +952,12 @@ async function copyLink() {
 
 async function nativeShare() {
   const list = session.list;
-  const url = `${location.origin}/l/${list.slug}`;
-  const data = { title: `${list.emoji} ${list.name}`, text: 'Mira lo que quiero comprarme 👀', url };
+  publishIfNeeded();
+  const item = session.sharingItem;
+  const url = $('#shareLink').textContent;
+  const data = item
+    ? { title: item.title, text: `${item.title}${item.priceText ? ' · ' + item.priceText : ''}`, url }
+    : { title: `${list.emoji} ${list.name}`, text: 'Mira lo que quiero comprarme 👀', url };
   if (navigator.share) { try { await navigator.share(data); } catch {} }
   else copyLink();
 }
@@ -900,6 +988,35 @@ function saveSharedList() {
   store.save();
   renderList();
   toast('Guardada en tus hauls ✦');
+}
+
+/* ------------------------------------------------- captura desde el inicio */
+
+/** Deja lista una lista donde guardar antes de abrir el formulario. */
+async function ensureTargetList() {
+  if (session.list && session.list.role === 'owner') return session.list;
+  if (store.data.lists.length) {
+    await openList(store.data.lists[0].slug, { push: false });
+    return session.list;
+  }
+  openListForm('create');
+  toast('Crea una lista y guardo lo que has pegado');
+  return null;
+}
+
+async function quickSave() {
+  const url = $('#homeUrlInput').value.trim();
+  if (!url) { $('#homeUrlInput').focus(); return; }
+  if (!(await ensureTargetList())) return;
+  $('#homeUrlInput').value = '';
+  openAdd(url);
+}
+
+async function quickShot() {
+  if (!(await ensureTargetList())) return;
+  openAdd();
+  setTab('shot');
+  $('#shotInput').click();
 }
 
 /* -------------------------------------------------------------- eventos */
@@ -942,7 +1059,7 @@ document.addEventListener('click', (ev) => {
     case 'new-list': openListForm('create'); break;
     case 'edit-list': openListForm('edit'); break;
     case 'add-item': openAdd(); break;
-    case 'share-list': openShare(); break;
+    case 'share-list': openShare({ item: null }); break;
     case 'save-list': saveSharedList(); break;
     case 'close-sheets': closeSheets(); break;
     case 'install': promptInstall(); break;
@@ -962,6 +1079,18 @@ $('#btnDeleteList').addEventListener('click', async () => {
   } catch (err) { toast(err.message); }
 });
 
+$('#btnHomeSave').addEventListener('click', quickSave);
+$('#homeUrlInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') quickSave(); });
+$('#btnHomeShot').addEventListener('click', quickShot);
+$('#btnHomePaste').addEventListener('click', async () => {
+  try {
+    const text = (await navigator.clipboard.readText()).trim();
+    if (!/^https?:\/\//i.test(text)) return toast('No hay ningún enlace copiado');
+    $('#homeUrlInput').value = text;
+    quickSave();
+  } catch { toast('Pega el enlace en el campo'); }
+});
+
 $('#btnReadUrl').addEventListener('click', readUrl);
 $('#urlInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') readUrl(); });
 $('#btnPaste').addEventListener('click', async () => {
@@ -977,6 +1106,23 @@ $('#btnManual').addEventListener('click', () => {
 $('#btnSaveItem').addEventListener('click', saveItem);
 $('#btnScanToggle').addEventListener('click', () => (session.scanner ? stopScanner() : startScanner()));
 $('#shotInput').addEventListener('change', (e) => handleShot(e.target.files[0]));
+// Zalando y otras apps comparten el producto como imagen, no como enlace.
+// En iPhone no se puede recibir ese "compartir" directamente, así que el
+// camino corto es copiar la imagen y pegarla aquí.
+$('#btnPasteImage').addEventListener('click', async () => {
+  try {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      const type = item.types.find((t) => t.startsWith('image/'));
+      if (!type) continue;
+      const blob = await item.getType(type);
+      return handleShot(new File([blob], 'pegado.png', { type }));
+    }
+    toast('No hay ninguna imagen copiada');
+  } catch {
+    toast('Tu navegador no deja pegar aquí: usa “Elegir imagen”');
+  }
+});
 $('#previewImg').addEventListener('click', () => $('#photoInput').click());
 $('#photoInput').addEventListener('change', (e) => attachPhoto(e.target.files[0]));
 
@@ -997,6 +1143,11 @@ document.addEventListener('paste', (e) => {
 $('#btnToggleBought').addEventListener('click', toggleBought);
 $('#btnDeleteItem').addEventListener('click', deleteItem);
 $('#btnEditItem').addEventListener('click', editItem);
+$('#btnShareItem').addEventListener('click', () => {
+  const item = session.item;
+  closeSheets();
+  setTimeout(() => openShare({ item }), 240);
+});
 $('#btnCopyLink').addEventListener('click', copyLink);
 $('#btnNativeShare').addEventListener('click', nativeShare);
 $('#btnToggleContrib').addEventListener('click', toggleContrib);
@@ -1025,30 +1176,56 @@ async function promptInstall() {
 
 /* --------------------------------------------------------------- rutas */
 
+/** Recoge lo que el service worker guardó al compartir desde otra app. */
+async function consumeShared() {
+  const out = { file: null, text: '' };
+  try {
+    const cache = await caches.open('haul-share');
+    const image = await cache.match('/__shared-image');
+    const text = await cache.match('/__shared-text');
+    if (image) {
+      const type = image.headers.get('content-type') || 'image/jpeg';
+      out.file = new File([await image.blob()], 'compartido.jpg', { type });
+    }
+    if (text) out.text = await text.text();
+    await cache.delete('/__shared-image');
+    await cache.delete('/__shared-text');
+  } catch { /* sin service worker no hay nada que recoger */ }
+  return out;
+}
+
 async function route({ push = true } = {}) {
   const params = new URLSearchParams(location.search);
 
-  // llegada desde "compartir con Haul" (share target del sistema)
-  const shared = params.get('url') || params.get('text') || '';
-  const sharedUrl = (shared.match(/https?:\/\/[^\s]+/) || [])[0];
+  // llegada desde "compartir con Haul": puede traer enlace, texto o imagen
+  const incoming = params.has('compartido')
+    ? await consumeShared()
+    : { file: null, text: params.get('url') || params.get('text') || '' };
+  const sharedUrl = ((incoming.text || '').match(/https?:\/\/[^\s]+/) || [])[0];
 
-  const match = location.pathname.match(/^\/l\/([\w-]+)/);
+  const match = location.pathname.match(/^\/l\/([\w-]+)(?:\/p\/([\w-]+))?/);
   if (match) {
     session.collabToken = params.get('t') || '';
     await openList(match[1], { push: false });
+    // enlace de una pieza suelta: se abre su tarjeta directamente
+    if (match[2] && session.list) setTimeout(() => openItem(match[2]), 320);
   } else if (store.data.lists.length || store.data.seenWelcome) {
     goto('home', { push });
   } else {
     goto('welcome', { push });
   }
 
-  if (sharedUrl) {
-    history.replaceState({}, '', location.pathname);
+  if (sharedUrl || incoming.file) {
+    history.replaceState({}, '', '/');
     if (!session.list) {
       if (store.data.lists.length) await openList(store.data.lists[0].slug, { push: false });
-      else { openListForm('create'); toast('Crea una lista para guardar el enlace'); return; }
+      else { openListForm('create'); toast('Crea una lista y te guardo lo que acabas de compartir'); return; }
     }
     openAdd(sharedUrl);
+    if (incoming.file) {
+      setTab('shot');
+      handleShot(incoming.file);
+    }
   }
 }
 
