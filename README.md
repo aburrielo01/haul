@@ -141,6 +141,7 @@ datos. Con `DIAG_TOKEN` definido:
 
 ```
 /api/bench/run?key=TU_DIAG_TOKEN            lanza los 100 (acepta &shop=Zara, &limit=10, &ids=E001,E002)
+                                             si el servidor se reinició a mitad, continúa por donde iba; &fresh=1 empieza de cero
 /api/bench/report?key=TU_DIAG_TOKEN&html=1  informe en el navegador; sin html=1 devuelve JSON
 ```
 

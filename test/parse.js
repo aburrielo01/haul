@@ -2,7 +2,7 @@
 /** Pruebas del parseador: precios en distintos formatos y lectura de fichas. */
 
 const assert = require('assert');
-const { parsePrice, isValidEan, cleanUrl, shopFromUrl, titleFromSlug } = require('../lib/extract');
+const { parsePrice, isValidEan, cleanUrl, shopFromUrl, titleFromSlug, stripSiteSuffix } = require('../lib/extract');
 
 let passed = 0;
 function ok(name, fn) {
@@ -32,6 +32,13 @@ ok('número plano con moneda declarada', () => {
 ok('texto sin cifras devuelve nulo', () => {
   assert.strictEqual(parsePrice('Consultar precio'), null);
   assert.strictEqual(parsePrice(''), null);
+});
+ok('quita el nombre de la tienda del final del título, no el del producto', () => {
+  assert.strictEqual(stripSiteSuffix('Chaqueta efecto ante bolsillos - Hombre | MANGO España (Península y Baleares)', { siteName: 'MANGO', host: 'shop.mango.com' }), 'Chaqueta efecto ante bolsillos');
+  assert.strictEqual(stripSiteSuffix('Cárdigan cruzado - Marrón oscuro - MUJER | H&M ES', { host: 'www2.hm.com' }), 'Cárdigan cruzado - Marrón oscuro');
+  assert.strictEqual(stripSiteSuffix('Jersey tacto suave - Hombre | Pull&Bear España', { host: 'www.pullandbear.com' }), 'Jersey tacto suave');
+  assert.strictEqual(stripSiteSuffix('Levi\'s 501 - Original Fit', { host: 'www.levi.com' }), 'Levi\'s 501 - Original Fit');
+  assert.strictEqual(stripSiteSuffix('Air Max 90', { host: 'www.nike.com' }), 'Air Max 90');
 });
 ok('valida el dígito de control del EAN', () => {
   assert.strictEqual(isValidEan('4006381333931'), true);

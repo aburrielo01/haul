@@ -160,6 +160,8 @@ function goto(screen, { push = true } = {}) {
   const showNav = ['home', 'profile', 'list'].includes(screen);
   $('#nav').classList.toggle('is-visible', showNav);
   $$('#nav button').forEach((b) => b.classList.toggle('is-active', b.dataset.nav === screen));
+  // el botón flotante vive fuera de las pantallas para no desplazarse con el scroll
+  $('#listFab').classList.toggle('is-visible', screen === 'list');
   $('.screen.is-active')?.scrollTo({ top: 0 });
 
   if (push) {
@@ -259,6 +261,7 @@ function renderList() {
   $('#btnEditList').classList.toggle('hidden', !isOwner);
   const canAdd = isOwner || list.allowContrib;
   $('#listFab').classList.toggle('hidden', !canAdd);
+  $('#heroAdd').classList.toggle('hidden', !canAdd);
 
   // aviso cuando la lista es de otra persona
   const banner = $('#listBanner');
@@ -288,15 +291,20 @@ function productCard(p) {
   const sourceLabel = { scan: 'escaneado', shot: 'captura', manual: 'a mano' }[p.source];
   return `
     <article class="product${p.bought ? ' is-bought' : ''}" data-open-item="${esc(p.id)}">
-      ${src
-        ? `<img class="product__img" src="${esc(src)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`
-        : `<div class="product__img" style="display:grid;place-items:center;font-size:34px">🏷️</div>`}
-      ${sourceLabel ? `<span class="badge-src">${sourceLabel}</span>` : ''}
-      <span class="product__tick">${p.bought ? '✓' : '♡'}</span>
+      <div class="product__canvas">
+        ${src
+          ? `<img class="product__img" src="${esc(src)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`
+          : `<div class="product__img product__img--empty">🏷️</div>`}
+        <span class="product__shop">${esc(p.shop || (sourceLabel ? sourceLabel : 'sin tienda'))}</span>
+        <span class="product__tick">${p.bought ? '✓' : '♡'}</span>
+        <span class="product__price">${esc(p.priceText || '—')}</span>
+      </div>
       <div class="product__body">
         <div class="product__title">${esc(p.title)}</div>
-        <div class="product__price">${esc(p.priceText || '—')}</div>
-        <div class="product__shop">${esc(p.shop || 'sin tienda')}</div>
+        <div class="product__meta">
+          <span>${p.note ? esc(p.note) : (sourceLabel || 'enlace')}</span>
+          <span class="product__go">${p.bought ? 'comprado' : 'ver →'}</span>
+        </div>
       </div>
     </article>`;
 }

@@ -25,7 +25,7 @@
   <section class="screen is-active" id="screen-welcome">
     <div class="between">
       <div class="logo">haul<em>●</em></div>
-      <span class="tag">ed. 01 / beta</span>
+      <span class="tag tag--blue">archive / 01</span>
     </div>
 
     <div style="margin-top:20px">
@@ -68,13 +68,13 @@
     <div class="between">
       <div class="row" style="gap:9px">
         <div class="logo">haul<em>●</em></div>
-        <span class="tag" id="homeGreeting">archivo</span>
+        <span class="tag tag--blue" id="homeGreeting">archivo</span>
       </div>
-      <button class="iconbtn" data-action="goto-profile" aria-label="Perfil">◉</button>
+      <button class="iconbtn iconbtn--ink" data-action="goto-profile" aria-label="Perfil">◉</button>
     </div>
 
     <!-- lo primero de la pantalla es guardar algo -->
-    <div class="capture">
+    <div class="capture frame">
       <i></i><i></i><i></i><i></i>
       <div class="capture__head">
         <span class="kicker"><span class="capture__dot"></span>guardar al vuelo</span>
@@ -82,7 +82,7 @@
       </div>
       <input class="input" id="homeUrlInput" placeholder="pega el enlace del producto…" inputmode="url" autocomplete="off" spellcheck="false">
       <div class="capture__actions" style="grid-template-columns:1fr auto auto">
-        <button class="btn btn--primary" id="btnHomeSave">Guardar</button>
+        <button class="btn btn--lime btn--sticker" id="btnHomeSave">Guardar</button>
         <button class="btn btn--sm" id="btnHomePaste">Pegar</button>
         <button class="btn btn--sm" id="btnHomeShot" aria-label="Subir captura">▣</button>
       </div>
@@ -95,7 +95,7 @@
         <span class="kicker">tableros</span>
         <h2 class="display" style="margin-top:4px">Mis listas</h2>
       </div>
-      <button class="btn btn--sm" data-action="new-list">+ Nueva</button>
+      <button class="btn btn--sm btn--pill btn--primary" data-action="new-list">+ Nueva</button>
     </div>
 
     <div class="stack" id="listStack" style="margin-top:12px"></div>
@@ -116,7 +116,7 @@
   <!-- ═══════════════════════════════ LISTA ═══════════════════════════════ -->
   <section class="screen" id="screen-list">
     <div class="between">
-      <button class="iconbtn" data-action="goto-home" aria-label="Volver">←</button>
+      <button class="iconbtn iconbtn--ink" data-action="goto-home" aria-label="Volver">←</button>
       <div class="row" style="gap:7px">
         <button class="iconbtn" data-action="edit-list" id="btnEditList" aria-label="Editar lista">✎</button>
         <button class="iconbtn iconbtn--ink" data-action="share-list" aria-label="Compartir">↗</button>
@@ -125,17 +125,27 @@
 
     <div id="listBanner"></div>
 
-    <div class="hero" style="margin-top:20px">
-      <span class="chip chip--accent hero__tag" id="listVisibility">privada</span>
-      <div class="between" style="align-items:flex-start">
-        <span style="font-size:30px;line-height:1" id="listEmoji">✶</span>
-        <span class="kicker" id="listRef">ref · 000</span>
+    <div class="hero frame" style="margin-top:20px">
+      <i></i><i></i><i></i><i></i>
+      <div class="hero__pin">
+        <span class="tag tag--blue" id="listVisibility">privada</span>
+        <span class="hero__pinline"></span><span class="hero__pindot"></span>
+        <span class="tag tag--lime" id="listRef">ref · 000</span>
       </div>
-      <h1 class="display" style="margin-top:8px" id="listName">Mi haul</h1>
+      <div class="between" style="align-items:flex-end;margin-top:12px">
+        <h1 class="display" id="listName">Mi haul</h1>
+        <span class="hero__emoji" id="listEmoji">✶</span>
+      </div>
       <div class="rule--dash" style="margin:14px 0 10px"></div>
-      <div class="row" style="gap:22px">
-        <div><div class="kicker">piezas</div><b style="font-family:var(--grotesk);font-weight:700;font-size:20px;letter-spacing:-.03em" id="listCount">0</b></div>
-        <div><div class="kicker">total</div><b style="font-family:var(--grotesk);font-weight:700;font-size:20px;letter-spacing:-.03em" id="listTotal">—</b></div>
+      <div class="between">
+        <div class="row" style="gap:22px">
+          <div><div class="kicker">piezas</div><b class="hero__num" id="listCount">0</b></div>
+          <div><div class="kicker">total</div><b class="hero__num" id="listTotal">—</b></div>
+        </div>
+      </div>
+      <div class="hero__actions">
+        <button class="btn btn--sm btn--pill btn--sticker" data-action="share-list">↗ Compartir</button>
+        <button class="btn btn--sm btn--pill btn--primary" data-action="add-item" id="heroAdd">✚ Añadir pieza</button>
       </div>
     </div>
 
@@ -153,8 +163,6 @@
       <p class="lead" style="margin-top:6px">Añade lo primero: un enlace, un escaneo o una captura.</p>
       <button class="btn btn--primary btn--block" style="margin-top:16px" data-action="add-item">Añadir producto</button>
     </div>
-
-    <button class="fab" data-action="add-item" id="listFab">✚ Añadir</button>
   </section>
 
   <!-- ═══════════════════════════════ PERFIL ══════════════════════════════ -->
@@ -390,6 +398,9 @@
     <button data-nav="add"><b>✚</b>Añadir</button>
     <button data-nav="profile"><b>◉</b>Perfil</button>
   </nav>
+
+  <!-- flotante de la lista: fuera de la pantalla para que no se mueva con el scroll -->
+  <button class="fab" data-action="add-item" id="listFab">✚ Añadir</button>
 
   <div class="toast" id="toast"><span class="grow" id="toastText"></span><button id="toastAction" class="hidden">Deshacer</button></div>
 </div>

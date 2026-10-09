@@ -122,6 +122,7 @@ async function loadList(req, res) {
 app.get('/api/health', async (_req, res) => res.json({
   ok: true,
   time: Date.now(),
+  uptime: Math.round(process.uptime()),
   unlocker: extract.unlockerEnabled(),
 }));
 
@@ -350,7 +351,7 @@ app.get('/api/bench/run', async (req, res) => {
   if (req.query.limit) filter.limit = Math.max(1, Number(req.query.limit) || 0);
   if (req.query.ids) filter.ids = String(req.query.ids).split(',').map((x) => x.trim()).filter(Boolean);
   try {
-    const out = await bench.run({ db, extract: extract.extractFromUrl, filter });
+    const out = await bench.run({ db, extract: extract.extractFromUrl, filter, fresh: req.query.fresh === '1' });
     res.json({ ok: true, ...out });
   } catch (err) {
     fail(res, 500, err.message);

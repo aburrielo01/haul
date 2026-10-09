@@ -1,8 +1,10 @@
 /* ==========================================================================
-   HAUL · sistema visual — scrapbook editorial
-   Lienzo casi blanco, esquinas rectas, hilo fino en lugar de borde grueso y
-   el acento con cuentagotas. El peso lo lleva la tipografía: un grotesco
-   apretado, una itálica de revista y un monoespaciado para las etiquetas.
+   HAUL · sistema visual — scrapbook editorial (Digital Scrapbook Editorial)
+   Lienzo casi blanco con retícula técnica, tarjetas con trazo negro y sombra
+   dura de pegatina, marcos de trabajo con marcas de registro y el color en
+   gotas: azul blueprint para etiquetas, lima para acciones, lavanda de bruma.
+   El peso lo lleva la tipografía: un grotesco apretado, una itálica de revista
+   y un monoespaciado para las etiquetas.
    ========================================================================== */
 
 :root {
@@ -28,7 +30,11 @@
 
   /* forma: recto por defecto, redondo solo en píldoras */
   --r-pill: 999px;
+  --r-card: 12px;          /* tarjetas: esquina suave; marcos y botones rectos */
   --sticker: 2px 3px 0 var(--ink);
+  --sticker-lg: 4px 4px 0 var(--ink);
+  --grid: linear-gradient(rgba(93, 155, 255, .13) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(93, 155, 255, .13) 1px, transparent 1px);
 
   /* tipografía */
   --grotesk: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -254,7 +260,11 @@ img { max-width: 100%; display: block; }
   text-transform: uppercase;
 }
 .tag--lime { background: var(--lime); }
+.tag--lav { background: var(--lavender); }
 .tag--sticker { box-shadow: var(--sticker); transform: rotate(-2deg); }
+/* etiqueta "blueprint": contorno y texto azul sobre tinte azul */
+.tag--blue { border-color: var(--sky); color: #005cbb; background: rgba(215, 227, 255, .5); }
+.tag--ink { border-color: var(--ink); color: #fff; background: var(--ink); }
 
 /* -------------------------------------------------------------- botones */
 
@@ -284,6 +294,11 @@ img { max-width: 100%; display: block; }
 .btn--sm { min-height: 42px; padding: 0 13px; font-size: 13.5px; }
 .btn--danger { color: var(--coral); border-color: var(--coral); }
 .btn--pill { border-radius: var(--r-pill); }
+/* pegatina: lima, trazo negro y sombra dura; al pulsar se hunde */
+.btn--sticker { background: var(--lime); color: var(--ink); border-color: var(--rule); box-shadow: var(--sticker); font-family: var(--mono); font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.btn--sticker:active, .btn--primary:active, .btn--lime:active { transform: translate(1px, 2px); box-shadow: none; }
+.btn--primary, .btn--lime { box-shadow: var(--sticker); }
+.btn--ghost:active, .btn--sm:not(.btn--sticker):not(.btn--primary):active { transform: translateY(1px); }
 
 .iconbtn {
   display: grid;
@@ -298,8 +313,8 @@ img { max-width: 100%; display: block; }
   line-height: 1;
   transition: transform .1s, background .15s;
 }
-.iconbtn:active { transform: translateY(1px); }
-.iconbtn--ink { background: var(--ink); color: #fff; }
+.iconbtn:active { transform: translate(1px, 1px); box-shadow: none; }
+.iconbtn--ink { background: var(--ink); color: #fff; box-shadow: var(--sticker); }
 .iconbtn--accent { background: var(--accent); color: var(--accent-ink); }
 
 /* --------------------------------------------------------------- inputs */
@@ -382,12 +397,11 @@ img { max-width: 100%; display: block; }
 /* ------------------------------------------------- barra de captura */
 
 .capture {
-  position: relative;
   margin-top: 14px;
   padding: 13px;
-  border: 1.5px dashed var(--ink);
-  background: var(--card);
+  border: 2px dashed var(--sky);
 }
+.capture .input { background: rgba(255, 255, 255, .92); }
 .capture__head {
   display: flex;
   align-items: center;
@@ -406,33 +420,51 @@ img { max-width: 100%; display: block; }
 .capture .inputrow { grid-template-columns: 1fr auto auto; }
 .capture__actions { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 6px; }
 
-/* marcas de registro en las esquinas */
-.capture i {
+/* marco de mesa de trabajo: retícula, bruma y marcas de registro en las esquinas */
+.frame { position: relative; background-color: var(--card); background-image: var(--grid); background-size: 24px 24px; }
+.frame::before {
+  content: '';
   position: absolute;
-  width: 6px;
-  height: 6px;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(45% 55% at 50% 50%, rgba(200, 179, 249, .38), rgba(215, 227, 255, .25) 55%, transparent 100%);
+}
+.frame > * { position: relative; z-index: 1; }
+.frame > i {
+  position: absolute;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
   background: var(--lime);
   border: 1px solid var(--ink);
 }
-.capture i:nth-child(1) { top: -4px; left: -4px; }
-.capture i:nth-child(2) { top: -4px; right: -4px; }
-.capture i:nth-child(3) { bottom: -4px; left: -4px; }
-.capture i:nth-child(4) { bottom: -4px; right: -4px; }
+.frame > i:nth-of-type(1) { top: -5px; left: -5px; }
+.frame > i:nth-of-type(2) { top: -5px; right: -5px; }
+.frame > i:nth-of-type(3) { bottom: -5px; left: -5px; }
+.frame > i:nth-of-type(4) { bottom: -5px; right: -5px; }
 
 /* --------------------------------------------------------------- cartas */
 
 .card { border: 1px solid var(--hair); background: var(--card); }
 .card--ink { border-color: var(--rule); }
 
+/* cabecera de la lista: mesa de trabajo con nodos azules y acciones en píldora */
 .hero {
-  position: relative;
-  padding: 26px 18px 18px;
-  border: 1.5px dashed var(--accent);
-  background: var(--card);
+  padding: 16px 16px 16px;
+  border: 2px dashed var(--accent);
 }
-.hero__tag { position: absolute; top: -11px; left: 14px; }
+.hero__pin { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+.hero__pin .tag { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hero__pinline { width: 22px; height: 1px; background: var(--sky); }
+.hero__pindot { width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--sky); background: var(--card); margin-right: 8px; }
+.hero__emoji { font-size: 34px; line-height: 1; flex: 0 0 auto; display: grid; place-items: center; width: 50px; height: 50px; border: 1px solid var(--ink); background: var(--card); border-radius: 50%; box-shadow: var(--sticker); transform: rotate(6deg); }
+.hero__num { font-family: var(--grotesk); font-weight: 700; font-size: 21px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.hero__actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.hero__actions .btn { min-height: 40px; padding: 0 14px; }
+.hero__actions .btn--primary { font-family: var(--mono); font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--hair); background: var(--card); margin-top: 12px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); border: 1.5px solid var(--ink); background: var(--card); margin-top: 12px; box-shadow: var(--sticker); }
 .stat { padding: 11px 8px; text-align: center; border-right: 1px solid var(--hair); }
 .stat:last-child { border-right: 0; }
 .stat b {
@@ -456,16 +488,22 @@ img { max-width: 100%; display: block; }
   width: 100%;
   padding: 10px;
   text-align: left;
-  border: 1px solid var(--hair);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--r-card);
   background: var(--card);
-  transition: border-color .15s, transform .1s;
+  box-shadow: var(--sticker-lg);
+  transition: transform .1s, box-shadow .1s;
 }
-.listcard:active { transform: translateY(1px); }
+.listcard:active { transform: translate(2px, 2px); box-shadow: var(--sticker); }
 .listcard__cover {
   width: 76px;
   height: 76px;
   overflow: hidden;
+  border-radius: 7px;
+  border: 1px solid var(--hair);
   background: var(--wash);
+  background-image: var(--grid);
+  background-size: 12px 12px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
@@ -476,59 +514,85 @@ img { max-width: 100%; display: block; }
 .listcard__cover--solo img { grid-area: 1 / 1 / 3 / 3; }
 .listcard__bar { width: 3px; align-self: stretch; background: var(--accent); }
 
-/* tarjeta de producto */
-.products { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+/* tarjeta de producto: recorte sobre mesa de trabajo, precio como pegatina */
+.products { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 10px; margin-top: 16px; }
 .product {
   position: relative;
-  border: 1px solid var(--hair);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--r-card);
   background: var(--card);
   overflow: hidden;
   text-align: left;
-  transition: border-color .15s, transform .1s;
+  box-shadow: var(--sticker-lg);
+  transition: transform .1s, box-shadow .1s;
 }
-.product:active { transform: translateY(1px); }
-.product__img {
-  width: 100%;
+.product:active { transform: translate(2px, 2px); box-shadow: var(--sticker); }
+/* la primera pieza se lleva el ancho entero: ritmo asimétrico de collage */
+.products .product:first-child { grid-column: 1 / -1; }
+.products .product:first-child .product__canvas { aspect-ratio: 16 / 10; }
+.products .product:first-child .product__title { font-size: 16px; -webkit-line-clamp: 2; min-height: 0; }
+.product__canvas {
+  position: relative;
   aspect-ratio: 1;
-  object-fit: cover;
-  background: var(--wash);
-}
-.product__body { padding: 9px 10px 11px; }
-.product__title {
-  font-weight: 500;
-  font-size: 13px;
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  background: linear-gradient(160deg, rgba(233, 221, 255, .55), var(--wash) 55%, rgba(215, 227, 255, .5));
   overflow: hidden;
-  min-height: 34px;
 }
-.product__price {
-  font-family: var(--grotesk);
-  font-weight: 700;
-  font-size: 17px;
-  letter-spacing: -.03em;
-  margin-top: 5px;
-  font-variant-numeric: tabular-nums;
+.product__canvas::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--grid);
+  background-size: 24px 24px;
+  opacity: .5;
 }
+.product__img {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 10px rgba(17, 17, 19, .14));
+}
+.product__img--empty { display: grid; place-items: center; font-size: 36px; }
 .product__shop {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  max-width: calc(100% - 50px);
+  padding: 3px 6px;
+  border: 1px solid var(--ink);
+  background: rgba(255, 255, 255, .92);
   font-family: var(--mono);
   font-size: 9px;
+  font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: var(--ink-faint);
-  margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.product__price {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--grotesk);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 2px 2px 0 var(--lime);
 }
 .product__tick {
   position: absolute;
   top: 7px;
   right: 7px;
-  width: 27px;
-  height: 27px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 1px solid var(--ink);
   background: rgba(255, 255, 255, .94);
@@ -536,10 +600,38 @@ img { max-width: 100%; display: block; }
   place-items: center;
   font-size: 12px;
 }
+.product__body { padding: 9px 10px 10px; }
+.product__title {
+  font-family: var(--grotesk);
+  font-weight: 600;
+  font-size: 13.5px;
+  letter-spacing: -.01em;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 35px;
+}
+.product__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--hair);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.product__meta span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.product__go { flex: 0 0 auto; color: var(--ink); font-weight: 700; }
 .product.is-bought .product__img { filter: grayscale(1); opacity: .45; }
 .product.is-bought .product__title { text-decoration: line-through; color: var(--ink-faint); }
 .product.is-bought .product__tick { background: var(--lime); }
-.badge-src { position: absolute; top: 7px; left: 7px; }
+.product.is-bought .product__price { background: var(--ink-faint); box-shadow: none; }
 
 /* la tarjeta de "añadir otro" al final de la rejilla */
 .addcard {
@@ -549,8 +641,9 @@ img { max-width: 100%; display: block; }
   min-height: 150px;
   padding: 16px;
   text-align: center;
-  border: 1.5px dashed var(--ink-faint);
-  background: transparent;
+  border: 2px dashed var(--sky);
+  border-radius: var(--r-card);
+  background: rgba(255, 255, 255, .6);
   color: var(--ink-soft);
 }
 .addcard b { font-family: var(--grotesk); font-weight: 600; font-size: 14px; color: var(--ink); }
@@ -561,7 +654,8 @@ img { max-width: 100%; display: block; }
   margin-top: 14px;
   padding: 26px 20px;
   text-align: center;
-  border: 1.5px dashed var(--ink-faint);
+  border: 2px dashed var(--sky);
+  border-radius: var(--r-card);
   background: var(--card);
 }
 .empty__emoji {
@@ -589,10 +683,11 @@ img { max-width: 100%; display: block; }
   grid-template-columns: repeat(3, 1fr);
   gap: 4px;
   padding: 5px;
-  border: 1px solid var(--rule);
+  border: 2px solid var(--rule);
   border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, .94);
+  background: rgba(255, 255, 255, .96);
   backdrop-filter: blur(16px);
+  box-shadow: 3px 3px 0 var(--ink);
 }
 .nav.is-visible { display: grid; }
 .nav button {
@@ -609,28 +704,33 @@ img { max-width: 100%; display: block; }
   color: var(--ink-soft);
 }
 .nav button b { font-size: 16px; font-weight: 400; line-height: 1; }
-.nav button.is-active { background: var(--lime); color: var(--ink); }
+.nav button.is-active { background: var(--lime); color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
 
+/* flotante de "añadir": hijo directo de .app, así queda clavado al marco y no al scroll */
 .fab {
   position: absolute;
   right: 16px;
-  bottom: calc(80px + var(--safe-b));
+  bottom: calc(84px + var(--safe-b));
   z-index: 21;
-  display: grid;
+  display: none;
   place-items: center;
   height: 46px;
   padding: 0 18px;
   border: 1px solid var(--rule);
   border-radius: var(--r-pill);
-  background: var(--ink);
-  color: #fff;
+  background: var(--lime);
+  color: var(--ink);
   font-family: var(--mono);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
+  box-shadow: var(--sticker);
+  animation: fab-in .22s cubic-bezier(.2, .9, .3, 1);
 }
-.fab:active { transform: translateY(1px); }
+.fab.is-visible { display: grid; }
+.fab:active { transform: translate(1px, 2px); box-shadow: none; }
+@keyframes fab-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 /* --------------------------------------------------------------- sheets */
 
@@ -656,7 +756,8 @@ img { max-width: 100%; display: block; }
   display: flex;
   flex-direction: column;
   padding: 8px 16px calc(20px + var(--safe-b));
-  border-top: 1.5px solid var(--ink);
+  border-top: 2px solid var(--ink);
+  border-radius: 14px 14px 0 0;
   background: var(--paper);
   transform: translateY(105%);
   transition: transform .28s cubic-bezier(.2, .9, .25, 1);
@@ -802,6 +903,7 @@ img { max-width: 100%; display: block; }
   background: var(--lavender);
   font-size: 12.5px;
   font-weight: 500;
+  box-shadow: var(--sticker);
 }
 
 @media (prefers-reduced-motion: reduce) {

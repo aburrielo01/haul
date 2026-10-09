@@ -51,6 +51,25 @@ async function ok(name, fn) {
     assert.strictEqual(state.summary.failed, 1);
   });
 
+  await ok('si el servidor se reinició a mitad, la siguiente ejecución continúa por donde iba', async () => {
+    // simula un estado "running" huérfano con dos de cuatro enlaces ya leídos
+    const prev = await bench.report(db);
+    const partial = { ...prev, status: 'running', finishedAt: null, summary: null, rows: prev.rows.filter((r) => ['E001', 'E005'].includes(r.id)), done: 2 };
+    await db.cacheSet('bench:latest', partial, 1000 * 60);
+    const seen = (await bench.report(db));
+    assert.strictEqual(seen.status, 'interrupted');
+    const calls = [];
+    const fake = async (url) => { calls.push(url); return { ok: true, mode: 'fetch', title: 'x', priceValue: 1, image: 'https://x/i.jpg' }; };
+    const started = await bench.run({ db, extract: fake, filter: { ids: ['E001', 'E005', 'E021', 'E061'] } });
+    assert.strictEqual(started.resumed, 2);
+    let state;
+    for (let i = 0; i < 50; i++) { await new Promise((r) => setTimeout(r, 50)); state = await bench.report(db); if (state.status === 'done') break; }
+    assert.strictEqual(state.status, 'done');
+    assert.strictEqual(calls.length, 2, 'solo lee los dos que faltaban');
+    assert.strictEqual(state.rows.length, 4);
+    assert.strictEqual(state.rows.find((r) => r.id === 'E001').grade.price, false, 'conserva el resultado anterior de E001');
+  });
+
   console.log(`\n${passed} correctas\n`);
   process.exit(process.exitCode || 0);
 })();
