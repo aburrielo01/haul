@@ -80,8 +80,11 @@ server.listen(0, '127.0.0.1', async () => {
     assert.strictEqual(await viaUnlocker(url), null);
   });
 
-  await ok('respeta el tope diario para proteger la factura', async () => {
+  await ok('respeta el tope diario de aciertos para proteger la factura', async () => {
     mode = 'ok';
+    // solo cuentan los aciertos: llevamos uno, el tope es tres
+    assert.ok(await viaUnlocker(url), 'segundo acierto');
+    assert.ok(await viaUnlocker(url), 'tercer acierto');
     const before = received.length;
     assert.strictEqual(await viaUnlocker(url), null, 'debería haberse cortado');
     assert.strictEqual(received.length, before, 'no debería haber llamado al servicio');

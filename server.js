@@ -124,6 +124,7 @@ app.get('/api/health', async (_req, res) => res.json({
   time: Date.now(),
   uptime: Math.round(process.uptime()),
   unlocker: extract.unlockerEnabled(),
+  unlockerUsage: extract.unlockerStats(),
 }));
 
 // Crear lista
@@ -326,7 +327,14 @@ app.get('/api/diagnose', limitExtract, async (req, res) => {
   if (key !== token) return fail(res, 403, 'Clave de diagnóstico incorrecta');
   const url = String(req.query.url || '').trim();
   if (!url) return fail(res, 400, 'Falta el parámetro url');
+  // &raw=fetch|movil|chromium|unlocker devuelve el HTML que vio ese intento
+  const raw = String(req.query.raw || '').trim();
   try {
+    if (raw) {
+      const { html } = await extract.diagnose(url, { raw });
+      if (!html) return fail(res, 404, 'Ese intento no devolvió HTML');
+      return res.type('html').send(html);
+    }
     res.json({ ok: true, ...(await extract.diagnose(url)) });
   } catch (err) {
     res.status(400).json({ ok: false, message: err.message });

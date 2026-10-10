@@ -90,8 +90,10 @@ node test/unlocker.js              # desbloqueador, contra un servidor falso
 | `BRIGHTDATA_API_KEY` | Clave de Bright Data para tiendas con anti-bot | — |
 | `BRIGHTDATA_UNLOCKER_ZONE` | Nombre de la zona Web Unlocker | — |
 | `UNLOCKER_COUNTRY` | País desde el que se leen las tiendas | `es` |
-| `UNLOCKER_DAILY_LIMIT` | Tope diario de peticiones de pago | `150` |
+| `UNLOCKER_DAILY_LIMIT` | Tope diario de aciertos de pago (los fallos no cuentan) | `150` |
+| `UNLOCKER_TIMEOUT` | Espera máxima al desbloqueador (ms); las verificaciones duras pasan de 45 s | `80000` |
 | `DIAG_TOKEN` | Activa `/api/diagnose` (ver abajo) | — |
+| `CHROMIUM_FIRST` | `1` para probar Chromium antes que el desbloqueador (gasta más memoria) | — |
 
 ## Tiendas con protección anti-bot
 
@@ -133,6 +135,9 @@ https://TU-APP.onrender.com/api/diagnose?url=https://tienda.com/producto&key=TU_
 
 Pégalo tal cual en una conversación de soporte. Ahorra media hora de adivinar.
 
+Con `&raw=fetch` (o `movil`, `chromium`, `unlocker`) devuelve el HTML tal cual lo
+vio ese intento: es la materia prima para escribir el adaptador de una tienda.
+
 ## Banco de pruebas
 
 Mide qué porcentaje de los enlaces de `test/bench-urls.json` se leen bien (nombre,
@@ -158,10 +163,11 @@ del bloque de compra (nunca el tachado ni el precio por unidad) y foto en
 
 ## Decisiones que conviene conocer
 
-- **Del intento más barato al más caro.** Shopify y la lectura normal resuelven la
-  mayoría en menos de un segundo; Chromium y el desbloqueador solo entran cuando
-  faltan datos. Si la tienda ya ha enseñado un muro anti-bot, se salta Chromium y se
-  va directo al desbloqueador. El resultado se cachea seis horas.
+- **Del intento más barato al más caro.** API propia de la tienda (Depop, ASOS),
+  Shopify y la lectura normal resuelven la mayoría en menos de un segundo. Con el
+  desbloqueador activo, Chromium queda como último recurso: en el plan pequeño de
+  Render gasta tanta memoria que tumba el proceso. Si la tienda ya ha enseñado un
+  muro anti-bot, Chromium ni se intenta. El resultado se cachea seis horas.
 - **Los errores técnicos se quedan en los logs.** Al usuario solo le llega un mensaje
   claro y el formulario medio relleno.
 - **Proxy de imágenes.** Las fotos pasan por `/api/img` porque muchas tiendas bloquean

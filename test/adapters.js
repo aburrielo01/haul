@@ -2,7 +2,8 @@
 /** Adaptadores por tienda y elección del precio correcto entre varios candidatos. */
 
 const assert = require('assert');
-const { parseHtml, cleanUrl } = require('../lib/extract');
+const { parseHtml, cleanUrl, parsePrice } = require('../lib/extract');
+const { ADAPTERS } = require('../lib/adapters');
 
 let passed = 0;
 function ok(name, fn) {
@@ -78,4 +79,49 @@ ok('tienda genérica: prefiere el precio declarado como dato', () => {
   assert.strictEqual(p.currency, 'EUR');
 });
 
-console.log(`\n${passed} correctas\n`);
+ok('Zalando: el título es el nombre, no la marca del primer span', () => {
+  const html = `<html><body><h1><span class="brand">adidas Originals</span><span class="name">BARREL PNT D - Vaqueros boyfriend - worn blue denim</span></h1>
+    <p class="price-wrapper"><span>84,95 €</span></p></body></html>`;
+  const p = parseHtml(html, 'https://www.zalando.es/adidas-originals-barrel.html');
+  assert.strictEqual(p.title, 'BARREL PNT D - Vaqueros boyfriend - worn blue denim');
+  assert.strictEqual(p.brand, 'adidas Originals');
+  assert.strictEqual(p.adapter, 'zalando');
+});
+ok('Douglas: ignora el nombre de variante del JSON-LD y usa el título real', () => {
+  const html = `<html><head><meta property="og:title" content="Dior Homme Parfum | DOUGLAS">
+    <script type="application/ld+json">{"@type":"Product","name":"50 ml","offers":{"@type":"Offer","price":"97","priceCurrency":"EUR"}}</script></head>
+    <body><h1>Dior Homme Parfum</h1></body></html>`;
+  const p = parseHtml(html, 'https://www.douglas.es/es/p/5011687008');
+  assert.strictEqual(p.title, 'Dior Homme Parfum | DOUGLAS');
+  assert.strictEqual(p.priceRaw, '97');
+});
+ok('precio sin separador de miles: 1469 es 1469, no 146', () => {
+  assert.strictEqual(parsePrice('1469', 'EUR').value, 1469);
+  assert.strictEqual(parsePrice('1539 €').value, 1539);
+  assert.strictEqual(parsePrice('1379.00', 'EUR').value, 1379);
+  assert.strictEqual(parsePrice('1.469 €').value, 1469);
+  assert.strictEqual(parsePrice('5,91€5,91€').value, 5.91);
+  assert.strictEqual(parsePrice('12,74€12,74€').value, 12.74);
+});
+(async () => {
+  const depop = ADAPTERS.find((a) => a.name === 'depop');
+  const asos = ADAPTERS.find((a) => a.name === 'asos');
+  let calls = [];
+  const fetchText = async (url) => {
+    calls.push(url);
+    if (url.includes('depop')) return JSON.stringify({ description: 'Carhartt Men\'s Tan and Brown Jacket\nGreat condition', price: { priceAmount: '108.89', currencyName: 'EUR' }, pictures: [[{ url: 'https://img/small.jpg', width: 150 }, { url: 'https://img/big.jpg', width: 640 }]], brandName: 'Carhartt' });
+    if (url.includes('asos')) return JSON.stringify([{ productId: 12345, productPrice: { current: { value: 24.99, currency: 'EUR' } } }]);
+    return null;
+  };
+  try {
+    const d = await depop.resolve('https://www.depop.com/products/user-carhartt-jacket/', { fetchText });
+    assert.strictEqual(d.title, 'Carhartt Men\'s Tan and Brown Jacket');
+    assert.strictEqual(d.priceRaw, '108.89');
+    assert.strictEqual(d.image, 'https://img/big.jpg');
+    const a = await asos.resolve('https://www.asos.com/es/levis/vaqueros/prd/12345?x=1', { fetchText });
+    assert.strictEqual(a.priceRaw, '24.99');
+    assert.ok(calls[1].includes('productIds=12345'));
+    passed++; console.log('  ✓ Depop y ASOS: precio y foto desde su API');
+  } catch (err) { console.log('  ✗ Depop y ASOS: precio y foto desde su API →', err.message); process.exitCode = 1; }
+  console.log(`\n${passed} correctas\n`);
+})();
