@@ -95,6 +95,44 @@ ok('Douglas: ignora el nombre de variante del JSON-LD y usa el título real', ()
   assert.strictEqual(p.title, 'Dior Homme Parfum | DOUGLAS');
   assert.strictEqual(p.priceRaw, '97');
 });
+ok('JSON-LD con variantes: la de la URL o la más barata, y la oferta más baja en stock', () => {
+  const html = `<html><head><script type="application/ld+json">{"@type":"ProductGroup","name":"Café","hasVariant":[
+    {"@type":"Product","name":"Café 250g","sku":"111","offers":{"@type":"Offer","price":"9.90","priceCurrency":"EUR"}},
+    {"@type":"Product","name":"Café 1Kg","sku":"2085415732812139","image":"https://i/x.png","offers":{"@type":"Offer","price":"26.59","priceCurrency":"EUR"}}]}</script></head><body><h1>Café</h1></body></html>`;
+  const p = parseHtml(html, 'https://www.miravia.es/p/i1367779623483755-s2085415732812139.html');
+  assert.strictEqual(p.priceRaw, '26.59');
+  const html2 = `<html><head><script type="application/ld+json">{"@type":"Product","name":"Camiseta","offers":[
+    {"@type":"Offer","price":64.69,"priceCurrency":"EUR","availability":"https://schema.org/InStock"},
+    {"@type":"Offer","price":59.99,"priceCurrency":"EUR","availability":"https://schema.org/InStock"},
+    {"@type":"Offer","price":49.99,"priceCurrency":"EUR","availability":"https://schema.org/OutOfStock"}]}</script></head><body></body></html>`;
+  assert.strictEqual(parseHtml(html2, 'https://tienda.com/p').priceRaw, '59.99');
+});
+ok('si el precio "oficial" aparece tachado en la página, vale el rebajado', () => {
+  const html = `<html><head><meta property="product:price:amount" content="59.99"><meta property="product:price:currency" content="EUR"></head>
+    <body><h1>Chaqueta</h1><div class="product-price"><span class="price-old"><del>59,99 €</del></span> <span class="price-current">49,99 €</span></div></body></html>`;
+  const p = parseHtml(html, 'https://shop.mango.com/es/p/x');
+  assert.strictEqual(p.priceRaw, '49,99 €');
+  // pero si el oficial no está tachado, se respeta aunque haya otro número más bajo
+  const html2 = `<html><head><meta property="product:price:amount" content="59.99"></head><body><span class="price">59,99 €</span><span class="price-unit">12,00 €/kg</span></body></html>`;
+  assert.strictEqual(parseHtml(html2, 'https://tienda.com/p').priceRaw, '59.99');
+});
+ok('Shein: el importe de los metadatos vale, la moneda la dice el subdominio', () => {
+  const html = `<html><head><meta property="og:title" content="Camiseta Zorclune | SHEIN"><meta property="product:price:amount" content="13.99"><meta property="product:price:currency" content="USD"></head><body></body></html>`;
+  const p = parseHtml(html, 'https://es.shein.com/Zorclune-p-507712330.html');
+  assert.strictEqual(p.priceRaw, '13.99');
+  assert.strictEqual(p.currency, 'EUR');
+});
+ok('JSON-LD con "product" en minúscula y envoltorios raros (BuyAction, ProductGroup)', () => {
+  const html = `<html><head>
+    <script type="application/ld+json">{"@context":"https://schema.org/","@type":"BuyAction","object":{"@type":"ProductGroup","name":"TV","hasVariant":[{"@type":"Product","name":"TV LED 43","offers":{"@type":"Offer","priceCurrency":"EUR","price":299}}]}}</script>
+    </head><body></body></html>`;
+  assert.strictEqual(parseHtml(html, 'https://www.mediamarkt.es/es/product/x.html').priceRaw, '299');
+  const html2 = `<html><head><script type="application/ld+json">{"@type":"product","name":"Ratón Vendetta","offers":{"@type":"Offer","price":"34.99","priceCurrency":"EUR"}}</script>
+    <script type="application/ld+json">{"@type":"ProductGroup","hasVariant":[{"@type":"Product","name":"Otro ratón","url":"https://www.pccomponentes.com/otro","offers":{"@type":"Offer","price":"39.99","priceCurrency":"EUR"}}]}</script></head><body></body></html>`;
+  const p2 = parseHtml(html2, 'https://www.pccomponentes.com/raton-vendetta');
+  assert.strictEqual(p2.priceRaw, '34.99');
+  assert.strictEqual(p2.title, 'Ratón Vendetta');
+});
 ok('precio sin separador de miles: 1469 es 1469, no 146', () => {
   assert.strictEqual(parsePrice('1469', 'EUR').value, 1469);
   assert.strictEqual(parsePrice('1539 €').value, 1539);
