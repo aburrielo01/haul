@@ -93,6 +93,7 @@ node test/unlocker.js              # desbloqueador, contra un servidor falso
 | `UNLOCKER_DAILY_LIMIT` | Tope diario de aciertos de pago (los fallos no cuentan) | `150` |
 | `UNLOCKER_TIMEOUT` | Espera máxima al desbloqueador (ms); las verificaciones duras pasan de 45 s | `80000` |
 | `DIAG_TOKEN` | Activa `/api/diagnose` (ver abajo) | — |
+| `SHOP_COUNTRY` | País para tiendas con precio por país (Shopify Markets) | `ES` |
 | `CHROMIUM_FIRST` | `1` para probar Chromium antes que el desbloqueador (gasta más memoria) | — |
 
 ## Tiendas con protección anti-bot
@@ -149,6 +150,13 @@ datos. Con `DIAG_TOKEN` definido:
                                              si el servidor se reinició a mitad, continúa por donde iba; &fresh=1 empieza de cero
 /api/bench/report?key=TU_DIAG_TOKEN&html=1  informe en el navegador; sin html=1 devuelve JSON
 ```
+
+Cada fallo guarda su **rastro**: qué intento se hizo (fetch, desbloqueador, Chromium),
+qué devolvió (código HTTP, muro, motivo de rechazo de Bright Data) y cuánto tardó.
+En el informe HTML aparece debajo de cada fila en rojo.
+
+Para releer solo algunos enlaces sin perder el resto del informe:
+`/api/bench/run?key=…&ids=E011,E033`.
 
 Para añadir enlaces, filas nuevas en el JSON (id, shop, url, title, price, currency).
 

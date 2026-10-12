@@ -70,6 +70,20 @@ async function ok(name, fn) {
     assert.strictEqual(state.rows.find((r) => r.id === 'E001').grade.price, false, 'conserva el resultado anterior de E001');
   });
 
+  await ok('los fallos guardan el rastro de intentos; los aciertos no', async () => {
+    const fake = async (url) => {
+      if (url.includes('zara')) { const e = new Error('bloqueado'); e.trail = [{ step: 'unlocker', result: 'rechazado', status: 403 }]; throw e; }
+      const it = bench.loadItems().find((i) => i.url === url);
+      return { ok: true, mode: 'fetch', title: it.title, priceValue: it.price, image: 'https://x/i.jpg', trail: [{ step: 'fetch', result: 'completo' }] };
+    };
+    await bench.run({ db, extract: fake, filter: { ids: ['E001', 'E005'] }, fresh: true });
+    let state;
+    for (let i = 0; i < 50; i++) { await new Promise((r) => setTimeout(r, 50)); state = await bench.report(db); if (state.status === 'done') break; }
+    const zara = state.rows.find((r) => r.id === 'E001');
+    assert.deepStrictEqual(zara.trail, [{ step: 'unlocker', result: 'rechazado', status: 403 }]);
+    assert.strictEqual(state.rows.find((r) => r.id === 'E005').trail, undefined);
+  });
+
   console.log(`\n${passed} correctas\n`);
   process.exit(process.exitCode || 0);
 })();

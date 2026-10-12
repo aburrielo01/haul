@@ -291,13 +291,15 @@ app.post('/api/extract', limitExtract, async (req, res) => {
     const key = 'url:' + extract.cleanUrl(url);
     const cached = await db.cacheGet(key);
     if (cached) return res.json({ ...cached, cached: true });
-    const data = await extract.extractFromUrl(url);
+    // el rastro de intentos es para diagnóstico, no viaja al móvil
+    const { trail, ...data } = await extract.extractFromUrl(url);
+    void trail;
     await db.cacheSet(key, data, 1000 * 60 * 60 * 6).catch(() => {});
     res.json(data);
   } catch (err) {
     // El detalle técnico se queda en los logs: al usuario nunca le sirve de nada
     // y una traza de error en pantalla da sensación de app rota.
-    console.error('extract', url, err && err.message);
+    console.error('extract', url, err && err.message, JSON.stringify((err && err.trail) || []).slice(0, 600));
     const blocked = err && err.code === 'BLOCKED';
     res.status(blocked ? 422 : 502).json({
       ok: false,
@@ -388,7 +390,8 @@ function renderBenchHtml(state) {
       <td class="small">${esc(g.got ? g.got.priceText : '')}${g.priceDiff ? ` <i>(±${g.priceDiff})</i>` : ''}</td>
       <td class="small">${esc(r.expected.title)} · ${esc(r.expected.price)}</td>
       <td class="small">${Math.round(r.ms / 100) / 10}s</td>
-    </tr>`;
+    </tr>${r.trail && r.trail.length ? `<tr><td></td><td colspan="9" class="small trail">${r.trail.map((t) =>
+      esc(`${t.step}: ${t.result || ''}${t.status ? ' ' + t.status : ''}${t.error ? ' · ' + t.error : ''}${t.title ? ' · «' + t.title + '»' : ''}${t.price ? ' · ' + t.price : ''}`)).join(' → ')}</td></tr>` : ''}`;
   }).join('');
   const shops = s ? s.byShop.map((x) => `<tr><td>${esc(x.shop)}</td><td>${x.ok}/${x.total}</td></tr>`).join('') : '';
   return `<!doctype html><meta charset="utf-8"><title>Banco de pruebas · Haul</title>
@@ -399,6 +402,7 @@ h1{font-size:28px;letter-spacing:-.03em;margin:0 0 4px}.sub{color:#6b6b78;margin
 .kpi{border:1px solid #e2e1e8;background:#fff;padding:12px}.kpi b{display:block;font-size:26px;letter-spacing:-.03em}.kpi span{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8b8f9a}
 table{border-collapse:collapse;width:100%;font-size:13px;background:#fff}th,td{border-bottom:1px solid #e2e1e8;padding:7px 9px;text-align:left;vertical-align:top}
 th{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b8f9a}.ok{color:#1a8f3a;font-weight:700}.ko{color:#d6362a;font-weight:700}.small{font-size:12px;color:#4a4f5a;max-width:260px}
+.trail{color:#8b8f9a;font-family:ui-monospace,monospace;font-size:11px;max-width:none;border-bottom:1px dashed #e2e1e8}
 .two{display:grid;grid-template-columns:1fr 3fr;gap:24px;align-items:start}@media(max-width:800px){.two{grid-template-columns:1fr}}
 </style>
 <h1>Banco de pruebas</h1>
