@@ -145,6 +145,12 @@ ok('Temu: el mismo precio en dos formatos pegados y el plazo detrás', () => {
   assert.strictEqual(parsePrice('€5.935,93€Paga 1,97€ hoy', 'EUR').value, 5.93);
   assert.strictEqual(parsePrice('1.111,11 €').value, 1111.11);
 });
+ok('Primor: el JSON-LD de la ficha manda sobre un precio de un carrusel', () => {
+  const html = `<html><head><script type="application/ld+json">{"@type":"Product","name":"ELVIVE Aceite","offers":{"@type":"Offer","price":7.98,"priceCurrency":"EUR"}}</script></head>
+    <body><div class="product-info"><span class="old-price">7,99 €</span><span class="price">7,98 €</span></div>
+    <div class="carrusel"><div><span class="old-price">7,98 €</span></div><span class="price-wrapper final">4,75 €</span></div></body></html>`;
+  assert.strictEqual(parseHtml(html, 'https://www.primor.eu/es_es/x-8755.html').priceRaw, '7.98');
+});
 ok('precio sin separador de miles: 1469 es 1469, no 146', () => {
   assert.strictEqual(parsePrice('1469', 'EUR').value, 1469);
   assert.strictEqual(parsePrice('1539 €').value, 1539);
