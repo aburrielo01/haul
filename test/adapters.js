@@ -133,6 +133,18 @@ ok('JSON-LD con "product" en minúscula y envoltorios raros (BuyAction, ProductG
   assert.strictEqual(p2.priceRaw, '34.99');
   assert.strictEqual(p2.title, 'Ratón Vendetta');
 });
+ok('Uniqlo y ASOS: el precio sale del estado incrustado en la página', () => {
+  const uni = `<html><head><meta property="og:title" content="Chaqueta plumas"></head><body><script>window.__S={"prices":{"base":{"currency":{"code":"EUR","symbol":"€"},"value":129.9},"promo":null,"isDualPrice":false}}</script></body></html>`;
+  assert.strictEqual(parseHtml(uni, 'https://www.uniqlo.com/es/es/products/E487424-000/00').priceRaw, '129.9');
+  const uniPromo = uni.replace('"promo":null', '"promo":{"currency":{"code":"EUR","symbol":"€"},"value":99.9}');
+  assert.strictEqual(parseHtml(uniPromo, 'https://www.uniqlo.com/es/es/products/E487424-000/00').priceRaw, '99.9');
+  const asos = `<html><head><meta property="og:title" content="Vaqueros"></head><body><script>window.asos.pdp.config.stockPriceResponse = '[{"productId":203280227,"productPrice":{"current":{"value":24.99,"text":"24,99 €"},"previous":{"value":49.95}}}]';</script></body></html>`;
+  assert.strictEqual(parseHtml(asos, 'https://www.asos.com/es/levis/x/prd/203280227').priceRaw, '24.99');
+});
+ok('Temu: el mismo precio en dos formatos pegados y el plazo detrás', () => {
+  assert.strictEqual(parsePrice('€5.935,93€Paga 1,97€ hoy', 'EUR').value, 5.93);
+  assert.strictEqual(parsePrice('1.111,11 €').value, 1111.11);
+});
 ok('precio sin separador de miles: 1469 es 1469, no 146', () => {
   assert.strictEqual(parsePrice('1469', 'EUR').value, 1469);
   assert.strictEqual(parsePrice('1539 €').value, 1539);
