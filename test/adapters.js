@@ -151,6 +151,17 @@ ok('Primor: el JSON-LD de la ficha manda sobre un precio de un carrusel', () => 
     <div class="carrusel"><div><span class="old-price">7,98 €</span></div><span class="price-wrapper final">4,75 €</span></div></body></html>`;
   assert.strictEqual(parseHtml(html, 'https://www.primor.eu/es_es/x-8755.html').priceRaw, '7.98');
 });
+ok('ASOS: el precio del producto del enlace, no el del "combínalo con"', () => {
+  const html = `<html><head><meta property="og:title" content="Vestido largo rojo"></head><body><script>window.asos.pdp.config.stockPriceResponse = '[{"productId":204174921,"productPrice":{"current":{"value":12.15}}},{"productId":206598310,"productPrice":{"current":{"value":46.99}}}]';</script></body></html>`;
+  assert.strictEqual(parseHtml(html, 'https://www.asos.com/es/vila/x/prd/206598310').priceRaw, '46.99');
+});
+ok('una ficha que menciona "captcha" en su texto no es un muro (Etsy)', () => {
+  const { isWall } = require('../lib/extract');
+  const ficha = parseHtml(`<html><head><title>Cadenas esenciales | Etsy</title><script type="application/ld+json">{"@type":"Product","name":"Cadenas esenciales","offers":{"price":"29.70","priceCurrency":"EUR"}}</script></head><body>Protegido por captcha al pagar. Access denied si no inicias sesión.</body></html>`, 'https://www.etsy.com/es/listing/1');
+  assert.strictEqual(isWall(ficha), false);
+  const muro = parseHtml('<html><head><title>Access Denied</title></head><body>Reference #18.abc</body></html>', 'https://www.levi.com/x');
+  assert.strictEqual(isWall(muro), true);
+});
 ok('precio sin separador de miles: 1469 es 1469, no 146', () => {
   assert.strictEqual(parsePrice('1469', 'EUR').value, 1469);
   assert.strictEqual(parsePrice('1539 €').value, 1539);

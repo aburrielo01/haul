@@ -455,13 +455,34 @@ async function submitListForm() {
 
 /* ------------------------------------------------------ añadir producto */
 
+/**
+ * Las apps no comparten un enlace a secas: Zalando manda "Artículos fantásticos
+ * en Zalando: Converse-CHUCK TAYLOR… https://www.zalando.es/…", Amazon y SHEIN
+ * algo parecido. De ese texto sale el enlace y, de regalo, un nombre de reserva
+ * por si la tienda no deja leer su ficha.
+ */
+function parseShared(raw) {
+  const text = String(raw || '').replace(/\s+/g, ' ').trim();
+  const m = text.match(/https?:\/\/[^\s"'<>]+/i);
+  if (!m) return { url: '', title: '' };
+  const url = m[0].replace(/[).,;!?»”]+$/, '');
+  let before = text.slice(0, m.index).trim();
+  // "… en Zalando: Nombre" / "Check out … on Amazon: Nombre" → lo que va tras los dos puntos
+  if (before.includes(':')) before = before.slice(before.lastIndexOf(':') + 1).trim();
+  before = before.replace(/^[«"“']|[»"”'\-–—|:]+$/g, '').trim();
+  const title = before.length >= 4 && before.length <= 160 && !/^https?:/i.test(before) ? before : '';
+  return { url, title };
+}
+
 function openAdd(prefillUrl) {
   if (!session.list) { toast('Abre o crea una lista primero'); return; }
   resetAdd();
   openSheet('sheet-add');
   if (prefillUrl) {
     setTab('link');
-    $('#urlInput').value = prefillUrl;
+    const shared = parseShared(prefillUrl);
+    session.hint = shared.title ? { title: shared.title } : null;
+    $('#urlInput').value = shared.url || prefillUrl;
     readUrl();
   } else {
     setTab('link');
@@ -471,6 +492,7 @@ function openAdd(prefillUrl) {
 
 function resetAdd() {
   session.pending = null;
+  session.hint = null;
   session.editingItem = null;
   $('#addPreview').classList.add('hidden');
   $('#addError').classList.add('hidden');
@@ -491,8 +513,10 @@ async function tryClipboard() {
   try {
     if (!navigator.clipboard?.readText) return;
     const text = (await navigator.clipboard.readText()).trim();
-    if (/^https?:\/\/\S+$/i.test(text) && text.length < 900) {
-      $('#urlInput').value = text;
+    const shared = parseShared(text);
+    if (shared.url && text.length < 1500) {
+      $('#urlInput').value = shared.url;
+      session.hint = shared.title ? { title: shared.title } : null;
       toast('Enlace pegado del portapapeles');
     }
   } catch { /* sin permiso: el usuario pega a mano */ }
@@ -530,8 +554,15 @@ function setLoading(on, text = 'Leyendo la tienda…') {
 }
 
 async function readUrl() {
-  const url = $('#urlInput').value.trim();
-  if (!/^https?:\/\//i.test(url)) { showAddError('Necesito un enlace completo que empiece por https://'); return; }
+  // si se ha pegado el texto entero de "compartir", se queda solo el enlace
+  const typed = $('#urlInput').value.trim();
+  const shared = parseShared(typed);
+  if (shared.url && shared.url !== typed) {
+    $('#urlInput').value = shared.url;
+    if (shared.title) session.hint = { title: shared.title };
+  }
+  const url = shared.url || typed;
+  if (!/^https?:\/\//i.test(url)) { showAddError('Pega el enlace del producto (o el texto que comparte la app de la tienda)'); return; }
   setLoading(true);
   $('#addPreview').classList.add('hidden');
   try {
@@ -547,7 +578,8 @@ async function readUrl() {
       { hint: 'Haz una captura de la ficha y la usamos como foto del producto. El precio lo lee sola.' }
     );
     showPreview({
-      title: fb.title || '',
+      // el nombre que venía en el texto compartido es mejor que el sacado de la URL
+      title: (session.hint && session.hint.title) || fb.title || '',
       url: fb.url || url,
       image: '',
       priceText: '',
@@ -1093,7 +1125,7 @@ $('#btnHomeShot').addEventListener('click', quickShot);
 $('#btnHomePaste').addEventListener('click', async () => {
   try {
     const text = (await navigator.clipboard.readText()).trim();
-    if (!/^https?:\/\//i.test(text)) return toast('No hay ningún enlace copiado');
+    if (!parseShared(text).url) return toast('No hay ningún enlace copiado');
     $('#homeUrlInput').value = text;
     quickSave();
   } catch { toast('Pega el enlace en el campo'); }
@@ -1103,9 +1135,9 @@ $('#btnReadUrl').addEventListener('click', readUrl);
 $('#urlInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') readUrl(); });
 $('#btnPaste').addEventListener('click', async () => {
   try {
-    const text = await navigator.clipboard.readText();
-    $('#urlInput').value = text.trim();
-    if (/^https?:\/\//i.test(text.trim())) readUrl();
+    const text = (await navigator.clipboard.readText()).trim();
+    $('#urlInput').value = text;
+    if (parseShared(text).url) readUrl();
   } catch { toast('Pega el enlace en el campo'); }
 });
 $('#btnManual').addEventListener('click', () => {
@@ -1229,7 +1261,8 @@ async function route({ push = true } = {}) {
       if (store.data.lists.length) await openList(store.data.lists[0].slug, { push: false });
       else { openListForm('create'); toast('Crea una lista y te guardo lo que acabas de compartir'); return; }
     }
-    openAdd(sharedUrl);
+    // se pasa el texto entero: openAdd separa el enlace del nombre que trae
+    openAdd(sharedUrl ? incoming.text : '');
     if (incoming.file) {
       setTab('shot');
       handleShot(incoming.file);
