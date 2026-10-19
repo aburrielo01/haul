@@ -87,6 +87,16 @@ ok('Zalando: el título es el nombre, no la marca del primer span', () => {
   assert.strictEqual(p.brand, 'adidas Originals');
   assert.strictEqual(p.adapter, 'zalando');
 });
+ok('Zalando: ficha nueva con spans anidados, sin título repetido y foto grande', () => {
+  const html = `<html><head><meta property="og:image" content="https://img01.ztat.net/a/x.jpg?imwidth=800&filter=packshot">
+    <script type="application/ld+json">{"@type":"ProductGroup","name":"CHUCK TAYLOR ALL STAR UNISEX - Zapatillas altas - black","image":["https://img01.ztat.net/a/x.jpg?imwidth=200"],"hasVariant":[{"@type":"Product","offers":{"@type":"Offer","price":"63.95","priceCurrency":"EUR","availability":"https://schema.org/InStock"}}]}</script></head>
+    <body><h1><div><a><span><span data-testid="product_title-brand-name">Converse</span></span></a></div><span><span data-testid="product_title-product-name">CHUCK TAYLOR ALL STAR UNISEX - Zapatillas altas - black</span></span></h1></body></html>`;
+  const p = parseHtml(html, 'https://www.zalando.es/converse-all-star-hi-altas-co415a03c-802.html');
+  assert.strictEqual(p.title, 'CHUCK TAYLOR ALL STAR UNISEX - Zapatillas altas - black');
+  assert.strictEqual(p.brand, 'Converse');
+  assert.strictEqual(p.priceRaw, '63.95');
+  assert.ok(/imwidth=1000/.test(p.image), p.image);
+});
 ok('Douglas: ignora el nombre de variante del JSON-LD y usa el título real', () => {
   const html = `<html><head><meta property="og:title" content="Dior Homme Parfum | DOUGLAS">
     <script type="application/ld+json">{"@type":"Product","name":"50 ml","offers":{"@type":"Offer","price":"97","priceCurrency":"EUR"}}</script></head>

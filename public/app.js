@@ -443,7 +443,10 @@ async function submitListForm() {
       renderList();
       goto('list');
       toast('Lista creada ✦');
-      setTimeout(() => openAdd(), 420);
+      // si se venía de "compartir" sin listas, lo compartido entra ahora
+      const shared = session.pendingShare;
+      session.pendingShare = null;
+      setTimeout(() => shareIntoList(shared), 420);
     }
     closeSheets();
   } catch (err) {
@@ -474,9 +477,10 @@ function parseShared(raw) {
   return { url, title };
 }
 
-function openAdd(prefillUrl) {
+function openAdd(prefillUrl, { photo = null } = {}) {
   if (!session.list) { toast('Abre o crea una lista primero'); return; }
   resetAdd();
+  session.sharedPhoto = photo && photo.type && photo.type.startsWith('image/') ? photo : null;
   openSheet('sheet-add');
   if (prefillUrl) {
     setTab('link');
@@ -493,6 +497,7 @@ function openAdd(prefillUrl) {
 function resetAdd() {
   session.pending = null;
   session.hint = null;
+  session.sharedPhoto = null;
   session.editingItem = null;
   $('#addPreview').classList.add('hidden');
   $('#addError').classList.add('hidden');
@@ -568,6 +573,7 @@ async function readUrl() {
   try {
     const data = await api('/extract', { method: 'POST', body: { url } });
     showPreview({ ...data, source: 'url', url: data.url || url });
+    if (!data.image && session.sharedPhoto) attachPhoto(session.sharedPhoto);
   } catch (err) {
     // Aunque la tienda nos cierre la puerta, del propio enlace se saca
     // el nombre y la tienda: así el formulario no empieza vacío.
@@ -586,6 +592,7 @@ async function readUrl() {
       shop: fb.shop || hostOf(url),
       source: 'url',
     });
+    if (session.sharedPhoto) attachPhoto(session.sharedPhoto);
   } finally {
     setLoading(false);
   }
@@ -1259,14 +1266,34 @@ async function route({ push = true } = {}) {
     history.replaceState({}, '', '/');
     if (!session.list) {
       if (store.data.lists.length) await openList(store.data.lists[0].slug, { push: false });
-      else { openListForm('create'); toast('Crea una lista y te guardo lo que acabas de compartir'); return; }
+      else {
+        session.pendingShare = incoming;
+        openListForm('create');
+        toast('Crea una lista y te guardo lo que acabas de compartir');
+        return;
+      }
     }
-    // se pasa el texto entero: openAdd separa el enlace del nombre que trae
-    openAdd(sharedUrl ? incoming.text : '');
-    if (incoming.file) {
-      setTab('shot');
-      handleShot(incoming.file);
-    }
+    shareIntoList(incoming);
+  }
+}
+
+/**
+ * Mete en la lista abierta lo que llegó al compartir. Con enlace manda el
+ * enlace: algunas apps (Zalando) mandan además una foto del producto, que
+ * queda solo como respaldo si la ficha no trae. Sin enlace, la imagen es una
+ * captura y se lee como tal.
+ */
+function shareIntoList(incoming) {
+  const text = (incoming && incoming.text) || '';
+  const file = (incoming && incoming.file) || null;
+  if (/https?:\/\//i.test(text)) {
+    openAdd(text, { photo: file });
+  } else if (file) {
+    openAdd('');
+    setTab('shot');
+    handleShot(file);
+  } else {
+    openAdd();
   }
 }
 
