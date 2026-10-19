@@ -1,8 +1,8 @@
 /* Service worker de Haul: la app abre al instante y sigue navegable sin datos. */
 
-const VERSION = 'haul-v3.12.0';
+const VERSION = 'haul-v3.13.0';
 const SHARE_CACHE = 'haul-share';
-const SHELL = ['/', '/styles.css', '/app.js', '/manifest.webmanifest', '/icons/icon.svg'];
+const SHELL = ['/', '/styles.css', '/app.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/favicon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

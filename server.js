@@ -512,8 +512,8 @@ app.get('/l/:slug/p/:id', async (req, res, next) => {
     const desc = [item.price_text, item.shop].filter(Boolean).join(' · ')
       || `Guardado en ${list.name}`;
     const image = item.image
-      ? (item.image.startsWith('data:') ? `${origin}/icons/og.png` : `${origin}/api/img?u=${encodeURIComponent(item.image)}`)
-      : `${origin}/icons/og.png`;
+      ? (item.image.startsWith('data:') ? `${origin}/icons/og.png?v=3130` : `${origin}/api/img?u=${encodeURIComponent(item.image)}`)
+      : `${origin}/icons/og.png?v=3130`;
     res.setHeader('Cache-Control', 'no-cache');
     res.type('html').send(await renderIndexWithMeta({
       title: `${item.title} · Haul`,
@@ -540,7 +540,7 @@ app.get('/l/:slug', async (req, res, next) => {
       : 'Una lista recién creada en Haul.';
     const image = cover && !cover.startsWith('data:')
       ? `${origin}/api/img?u=${encodeURIComponent(cover)}`
-      : `${origin}/icons/og.png`;
+      : `${origin}/icons/og.png?v=3130`;
 
     res.setHeader('Cache-Control', 'no-cache');
     res.type('html').send(await renderIndexWithMeta({
