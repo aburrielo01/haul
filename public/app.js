@@ -464,6 +464,17 @@ async function submitListForm() {
  * algo parecido. De ese texto sale el enlace y, de regalo, un nombre de reserva
  * por si la tienda no deja leer su ficha.
  */
+/** "Artículos fantásticos en Zalando: adidas SAMBA - Zapatillas" → nombre y tienda, sin enlace. */
+function guessFromShareText(raw) {
+  const text = String(raw || '').replace(/\s+/g, ' ').trim();
+  if (!text || /https?:\/\//i.test(text) || text.length > 200) return { title: '', shop: '' };
+  const m = text.match(/\b(?:en|on|at|de|from)\s+([A-ZÁÉÍÓÚÑ][\w&'.-]*(?:\s[A-ZÁÉÍÓÚÑ][\w&'.-]*)?)\s*:\s*(.{4,})$/);
+  if (m) return { title: m[2].trim(), shop: m[1].trim() };
+  const i = text.lastIndexOf(':');
+  const title = (i >= 0 ? text.slice(i + 1) : text).trim();
+  return { title: title.length >= 4 ? title : '', shop: '' };
+}
+
 function parseShared(raw) {
   const text = String(raw || '').replace(/\s+/g, ' ').trim();
   const m = text.match(/https?:\/\/[^\s"'<>]+/i);
@@ -517,14 +528,43 @@ function setTab(tab) {
   if (tab !== 'scan') stopScanner();
 }
 
+/**
+ * Lee el portapapeles entero. En iPhone, al copiar desde la app de una tienda,
+ * el enlace viaja como un elemento aparte del texto (y a veces con la foto del
+ * producto): readText() solo devuelve el texto, sin el enlace.
+ */
+async function readClipboard() {
+  const out = { text: '', file: null };
+  try {
+    if (navigator.clipboard?.read) {
+      const parts = [];
+      for (const item of await navigator.clipboard.read()) {
+        for (const type of item.types) {
+          if (type === 'text/plain' || type === 'text/uri-list') {
+            parts.push(await (await item.getType(type)).text());
+          } else if (type.startsWith('image/') && !out.file) {
+            out.file = new File([await item.getType(type)], 'pegado.png', { type });
+          }
+        }
+      }
+      out.text = parts.join(' ');
+    }
+  } catch { /* sin permiso o sin soporte: probamos solo texto */ }
+  if (!out.text && navigator.clipboard?.readText) {
+    try { out.text = await navigator.clipboard.readText(); } catch { /* el usuario pega a mano */ }
+  }
+  out.text = out.text.replace(/\s+/g, ' ').trim();
+  return out;
+}
+
 async function tryClipboard() {
   try {
-    if (!navigator.clipboard?.readText) return;
-    const text = (await navigator.clipboard.readText()).trim();
+    const { text, file } = await readClipboard();
     const shared = parseShared(text);
     if (shared.url && text.length < 1500) {
       $('#urlInput').value = shared.url;
       session.hint = shared.title ? { title: shared.title } : null;
+      if (file && !session.sharedPhoto) session.sharedPhoto = file;
       toast('Enlace pegado del portapapeles');
     }
   } catch { /* sin permiso: el usuario pega a mano */ }
@@ -570,7 +610,21 @@ async function readUrl() {
     if (shared.title) session.hint = { title: shared.title };
   }
   const url = shared.url || typed;
-  if (!/^https?:\/\//i.test(url)) { showAddError('Pega el enlace del producto (o el texto que comparte la app de la tienda)'); return; }
+  if (!/^https?:\/\//i.test(url)) {
+    const guess = guessFromShareText(typed);
+    if (guess.title) {
+      // Llegó el texto de la tienda pero sin el enlace (pasa al copiar desde
+      // algunas apps en iPhone): queda el nombre y se pide el enlace.
+      showAddError('El texto copiado no traía el enlace del producto', {
+        hint: 'Te dejo el nombre. Para que lea foto y precio, en la ficha de la tienda toca compartir y elige "Copiar enlace", o pégalo aquí desde el navegador.',
+      });
+      showPreview({ title: guess.title, shop: guess.shop, url: '', image: '', priceText: '', source: 'manual' });
+      if (session.sharedPhoto) attachPhoto(session.sharedPhoto);
+      return;
+    }
+    showAddError('Pega el enlace del producto (o el texto que comparte la app de la tienda)');
+    return;
+  }
   setLoading(true);
   $('#addPreview').classList.add('hidden');
   try {
@@ -1134,10 +1188,10 @@ $('#homeUrlInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') q
 $('#btnHomeShot').addEventListener('click', quickShot);
 $('#btnHomePaste').addEventListener('click', async () => {
   try {
-    const text = (await navigator.clipboard.readText()).trim();
-    if (!parseShared(text).url) return toast('No hay ningún enlace copiado');
+    const { text, file } = await readClipboard();
+    if (!parseShared(text).url) return toast(text ? 'Lo copiado no trae ningún enlace' : 'No hay nada copiado');
     $('#homeUrlInput').value = text;
-    quickSave();
+    quickSave({ photo: file });
   } catch { toast('Pega el enlace en el campo'); }
 });
 
@@ -1145,9 +1199,11 @@ $('#btnReadUrl').addEventListener('click', readUrl);
 $('#urlInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') readUrl(); });
 $('#btnPaste').addEventListener('click', async () => {
   try {
-    const text = (await navigator.clipboard.readText()).trim();
+    const { text, file } = await readClipboard();
+    if (!text) return toast('No hay nada copiado');
     $('#urlInput').value = text;
-    if (parseShared(text).url) readUrl();
+    session.sharedPhoto = file;
+    readUrl();
   } catch { toast('Pega el enlace en el campo'); }
 });
 $('#btnManual').addEventListener('click', () => {
@@ -1191,7 +1247,7 @@ $('#photoInput').addEventListener('change', (e) => attachPhoto(e.target.files[0]
 document.addEventListener('paste', (e) => {
   const cd = e.clipboardData;
   if (!cd) return;
-  const text = cd.getData('text/plain') || cd.getData('text/uri-list') || '';
+  const text = [cd.getData('text/plain'), cd.getData('text/uri-list')].filter(Boolean).join(' ');
   const file = [...(cd.files || [])].find((f) => f.type && f.type.startsWith('image/')) || null;
   const shared = parseShared(text);
   const addOpen = $('#sheet-add').classList.contains('is-open');
@@ -1204,6 +1260,15 @@ document.addEventListener('paste', (e) => {
     return;
   }
   if (shared.url && addOpen) {
+    e.preventDefault();
+    setTab('link');
+    session.sharedPhoto = file;
+    $('#urlInput').value = flat;
+    readUrl();
+    return;
+  }
+  if (addOpen && !shared.url && guessFromShareText(text).title) {
+    // texto de tienda sin enlace (y quizá su foto): se queda el nombre y se pide el enlace
     e.preventDefault();
     setTab('link');
     session.sharedPhoto = file;
