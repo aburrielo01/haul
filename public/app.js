@@ -468,7 +468,10 @@ function parseShared(raw) {
   const text = String(raw || '').replace(/\s+/g, ' ').trim();
   const m = text.match(/https?:\/\/[^\s"'<>]+/i);
   if (!m) return { url: '', title: '' };
-  const url = m[0].replace(/[).,;!?»”]+$/, '');
+  let url = m[0].replace(/[).,;!?»”]+$/, '');
+  // Al pegar en un campo de una línea se pierden los saltos de línea y el
+  // texto que iba debajo queda pegado al enlace: ".htmlArtículos fantásticos…"
+  url = url.replace(/(\.html?|\.php|\.aspx?)(?=[^/?#&=.\w]|[A-ZÁÉÍÓÚÑ]).*$/, '$1');
   let before = text.slice(0, m.index).trim();
   // "… en Zalando: Nombre" / "Check out … on Amazon: Nombre" → lo que va tras los dos puntos
   if (before.includes(':')) before = before.slice(before.lastIndexOf(':') + 1).trim();
@@ -1051,12 +1054,12 @@ async function ensureTargetList() {
   return null;
 }
 
-async function quickSave() {
+async function quickSave({ photo = null } = {}) {
   const url = $('#homeUrlInput').value.trim();
   if (!url) { $('#homeUrlInput').focus(); return; }
   if (!(await ensureTargetList())) return;
   $('#homeUrlInput').value = '';
-  openAdd(url);
+  openAdd(url, { photo });
 }
 
 async function quickShot() {
@@ -1126,7 +1129,7 @@ $('#btnDeleteList').addEventListener('click', async () => {
   } catch (err) { toast(err.message); }
 });
 
-$('#btnHomeSave').addEventListener('click', quickSave);
+$('#btnHomeSave').addEventListener('click', () => quickSave());
 $('#homeUrlInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') quickSave(); });
 $('#btnHomeShot').addEventListener('click', quickShot);
 $('#btnHomePaste').addEventListener('click', async () => {
@@ -1181,10 +1184,34 @@ $('#photoInput').addEventListener('change', (e) => attachPhoto(e.target.files[0]
   if (t === 'drop') handleShot(e.dataTransfer?.files?.[0]);
 }));
 
+// Al copiar desde la app de una tienda (Zalando, por ejemplo) el portapapeles
+// del móvil trae el texto con el enlace y, a la vez, la foto del producto. El
+// enlace manda: la foto queda solo de respaldo. Se lee el texto del evento
+// porque el campo, al pegar, pierde los saltos de línea.
 document.addEventListener('paste', (e) => {
-  if (!$('#sheet-add').classList.contains('is-open')) return;
-  const file = [...(e.clipboardData?.files || [])][0];
-  if (file) { setTab('shot'); handleShot(file); }
+  const cd = e.clipboardData;
+  if (!cd) return;
+  const text = cd.getData('text/plain') || cd.getData('text/uri-list') || '';
+  const file = [...(cd.files || [])].find((f) => f.type && f.type.startsWith('image/')) || null;
+  const shared = parseShared(text);
+  const addOpen = $('#sheet-add').classList.contains('is-open');
+  const flat = text.replace(/\s+/g, ' ').trim();
+
+  if (shared.url && e.target === $('#homeUrlInput')) {
+    e.preventDefault();
+    $('#homeUrlInput').value = flat;
+    quickSave({ photo: file });
+    return;
+  }
+  if (shared.url && addOpen) {
+    e.preventDefault();
+    setTab('link');
+    session.sharedPhoto = file;
+    $('#urlInput').value = flat;
+    readUrl();
+    return;
+  }
+  if (file && addOpen) { setTab('shot'); handleShot(file); }
 });
 
 $('#btnToggleBought').addEventListener('click', toggleBought);
