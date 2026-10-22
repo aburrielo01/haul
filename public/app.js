@@ -464,6 +464,13 @@ async function submitListForm() {
  * algo parecido. De ese texto sale el enlace y, de regalo, un nombre de reserva
  * por si la tienda no deja leer su ficha.
  */
+function isSelfUrl(url) {
+  try { return new URL(url).hostname === location.hostname; } catch { return false; }
+}
+function safeDecode(text) {
+  try { return decodeURIComponent(text); } catch { return text; }
+}
+
 /** "Artículos fantásticos en Zalando: adidas SAMBA - Zapatillas" → nombre y tienda, sin enlace. */
 function guessFromShareText(raw) {
   const text = String(raw || '').replace(/\s+/g, ' ').trim();
@@ -483,6 +490,12 @@ function parseShared(raw) {
   // Al pegar en un campo de una línea se pierden los saltos de línea y el
   // texto que iba debajo queda pegado al enlace: ".htmlArtículos fantásticos…"
   url = url.replace(/(\.html?|\.php|\.aspx?)(?=[^/?#&=.\w]|[A-ZÁÉÍÓÚÑ]).*$/, '$1');
+  // La propia dirección de Haul no es un producto. Si lleva un enlace detrás
+  // de #add= (lo que abre el Atajo de iPhone), se lee ese; si no, no hay nada.
+  if (isSelfUrl(url)) {
+    const inner = url.split('#add=')[1] || '';
+    return inner ? parseShared(safeDecode(inner)) : { url: '', title: '' };
+  }
   let before = text.slice(0, m.index).trim();
   // "… en Zalando: Nombre" / "Check out … on Amazon: Nombre" → lo que va tras los dos puntos
   if (before.includes(':')) before = before.slice(before.lastIndexOf(':') + 1).trim();
@@ -610,7 +623,7 @@ async function readUrl() {
     if (shared.title) session.hint = { title: shared.title };
   }
   const url = shared.url || typed;
-  if (!/^https?:\/\//i.test(url)) {
+  if (!/^https?:\/\//i.test(url) || isSelfUrl(url)) {
     const guess = guessFromShareText(typed);
     if (guess.title) {
       // Llegó el texto de la tienda pero sin el enlace (pasa al copiar desde
@@ -1364,11 +1377,13 @@ async function route({ push = true } = {}) {
     : { file: null, text: params.get('url') || params.get('text') || '' };
   // El Atajo de iPhone abre /#add=<enlace>: va tras la almohadilla para que
   // los parámetros del enlace de la tienda (?size=35&color=…) lleguen enteros.
-  if (!incoming.text && /^#add=/.test(location.hash)) {
-    const raw = location.hash.slice(5);
-    let text = raw;
-    try { text = decodeURIComponent(raw); } catch { /* venía sin codificar */ }
+  if (!incoming.text && /^#add=?/.test(location.hash)) {
+    const text = safeDecode(location.hash.replace(/^#add=?/, ''));
     incoming = { file: null, text };
+    if (!/https?:\/\//i.test(text)) {
+      history.replaceState({}, '', '/');
+      toast('El Atajo ha llegado sin enlace: revisa el paso 6 (el chip URLs tras la dirección)');
+    }
   }
   const sharedUrl = ((incoming.text || '').match(/https?:\/\/[^\s]+/) || [])[0];
 
@@ -1432,6 +1447,15 @@ function boot() {
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
+    // Al activarse una versión nueva, la página se recarga una vez para no
+    // seguir con el código antiguo hasta la siguiente visita.
+    const hadController = !!navigator.serviceWorker.controller; // en la primera visita no hay nada que renovar
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloaded) return;
+      reloaded = true;
+      if (!$$('.sheet.is-open').length) location.reload();
+    });
   }
 }
 
