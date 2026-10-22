@@ -1167,6 +1167,7 @@ document.addEventListener('click', (ev) => {
     case 'save-list': saveSharedList(); break;
     case 'close-sheets': closeSheets(); break;
     case 'install': promptInstall(); break;
+    case 'mobile-help': openMobileHelp(); break;
   }
 });
 
@@ -1196,6 +1197,11 @@ $('#btnHomePaste').addEventListener('click', async () => {
 });
 
 $('#btnReadUrl').addEventListener('click', readUrl);
+$('#mobileTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-mtab]'); if (b) setMobileTab(b.dataset.mtab); });
+$('#btnCopyHaulAddr').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(ADD_ADDRESS); toast('Dirección copiada ✦ pégala en el paso 6'); }
+  catch { toast(ADD_ADDRESS); }
+});
 $('#urlInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') readUrl(); });
 $('#btnPaste').addEventListener('click', async () => {
   try {
@@ -1298,12 +1304,28 @@ $('#profileName').addEventListener('input', (e) => {
 $('#profileName').addEventListener('blur', renderProfile);
 
 window.addEventListener('popstate', () => route({ push: false }));
+// Si Haul ya estaba abierta, el Atajo solo cambia la almohadilla: no recarga.
+window.addEventListener('hashchange', () => { if (/^#add=/.test(location.hash)) route({ push: false }); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheets(); });
 
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   session.deferredInstall = e;
 });
+/** Guía para poner Haul en el menú Compartir del móvil; abre la pestaña del sistema que toque. */
+function openMobileHelp() {
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  setMobileTab(ios ? 'ios' : 'android');
+  openSheet('sheet-mobile');
+}
+function setMobileTab(tab) {
+  $$('#mobileTabs button').forEach((b) => b.classList.toggle('is-active', b.dataset.mtab === tab));
+  $('#mtab-ios').classList.toggle('hidden', tab !== 'ios');
+  $('#mtab-android').classList.toggle('hidden', tab !== 'android');
+}
+/** Dirección que el Atajo de iPhone abre con el enlace del producto detrás. */
+const ADD_ADDRESS = `${location.origin}/#add=`;
+
 async function promptInstall() {
   if (!session.deferredInstall) {
     toast('En iPhone: Compartir → Añadir a pantalla de inicio');
@@ -1337,9 +1359,17 @@ async function route({ push = true } = {}) {
   const params = new URLSearchParams(location.search);
 
   // llegada desde "compartir con Haul": puede traer enlace, texto o imagen
-  const incoming = params.has('compartido')
+  let incoming = params.has('compartido')
     ? await consumeShared()
     : { file: null, text: params.get('url') || params.get('text') || '' };
+  // El Atajo de iPhone abre /#add=<enlace>: va tras la almohadilla para que
+  // los parámetros del enlace de la tienda (?size=35&color=…) lleguen enteros.
+  if (!incoming.text && /^#add=/.test(location.hash)) {
+    const raw = location.hash.slice(5);
+    let text = raw;
+    try { text = decodeURIComponent(raw); } catch { /* venía sin codificar */ }
+    incoming = { file: null, text };
+  }
   const sharedUrl = ((incoming.text || '').match(/https?:\/\/[^\s]+/) || [])[0];
 
   const match = location.pathname.match(/^\/l\/([\w-]+)(?:\/p\/([\w-]+))?/);

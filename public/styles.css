@@ -909,3 +909,13 @@ img { max-width: 100%; display: block; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* ---- guía "añadir a Haul desde el menú compartir" ---- */
+.linkbtn { background: none; border: 0; padding: 0; font: inherit; font-size: 12.5px; color: #005cbb; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.steps { margin: 14px 0; padding: 0; list-style: none; counter-reset: paso; }
+.steps li { position: relative; padding: 0 0 14px 38px; font-size: 14px; line-height: 1.45; counter-increment: paso; }
+.steps li::before { content: counter(paso, decimal-leading-zero); position: absolute; left: 0; top: 1px; width: 26px; height: 26px; border: 1.5px solid var(--ink); border-radius: 999px; font-family: var(--mono); font-size: 11px; display: grid; place-items: center; background: var(--lime); }
+.steps li::after { content: ""; position: absolute; left: 12.5px; top: 30px; bottom: 2px; border-left: 1.5px dashed var(--hair); }
+.steps li:last-child::after { display: none; }
+.steps__code { display: block; margin-top: 8px; padding: 8px 10px; border: 1.5px solid var(--ink); background: var(--paper); font-family: var(--mono); font-size: 11.5px; word-break: break-all; }
+.steps__code .chip { display: inline-block; padding: 1px 7px; margin-left: 2px; border-radius: 999px; background: var(--sky); color: #fff; font-family: var(--sans); font-size: 11px; }

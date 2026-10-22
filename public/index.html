@@ -199,6 +199,12 @@
       <button class="btn btn--sm btn--block" style="margin-top:10px" id="btnInstall" data-action="install">Añadir a inicio</button>
     </div>
 
+    <div style="margin-top:18px">
+      <h3 class="title">Haul en el menú Compartir</h3>
+      <p class="small muted" style="margin-top:4px">Desde cualquier app de tienda: Compartir → Añadir a Haul. Sin copiar ni pegar.</p>
+      <button class="btn btn--sm btn--block" style="margin-top:10px" data-action="mobile-help">Cómo activarlo</button>
+    </div>
+
     <div class="stats" id="profileStats" style="margin-top:18px"></div>
     <div class="spacer"></div>
     <p class="kicker center" style="margin-top:16px">haul · ed. 01</p>
@@ -270,6 +276,7 @@
       </label>
       <button class="btn btn--primary btn--block" style="margin-top:10px" id="btnReadUrl">Leer producto</button>
       <p class="small faint" style="margin-top:8px">Funciona con casi cualquier tienda. Si alguna se resiste, lo rellenas a mano en dos segundos.</p>
+      <button class="linkbtn" data-action="mobile-help" style="margin-top:8px">¿Desde el móvil? Pon Haul en el menú Compartir →</button>
     </div>
 
     <!-- pestaña escanear -->
@@ -343,6 +350,45 @@
   </div>
 
   <!-- detalle de producto -->
+  <!-- ═══════════ AÑADIR A HAUL DESDE EL MENÚ COMPARTIR DEL MÓVIL ════════ -->
+  <div class="sheet" id="sheet-mobile" role="dialog" aria-modal="true" aria-labelledby="mobileTitle">
+    <div class="sheet__grab"></div>
+    <span class="kicker">menú compartir</span>
+    <h2 class="display" style="margin-top:4px" id="mobileTitle">Añadir a Haul</h2>
+    <p class="lead" style="margin-top:8px">Una vez activado, en cualquier app de tienda tocas <b>Compartir</b> y eliges <b>Haul</b>. Haul recibe el enlace y lee la ficha sola, sin copiar nada.</p>
+
+    <div class="seg" id="mobileTabs" style="margin-top:14px">
+      <button data-mtab="ios" class="is-active">iPhone</button>
+      <button data-mtab="android">Android</button>
+    </div>
+
+    <div id="mtab-ios">
+      <p class="small muted" style="margin-top:12px">Apple no deja que una web entre en el menú Compartir, pero los <b>Atajos</b> sí. Se monta una vez, en dos minutos.</p>
+      <ol class="steps">
+        <li><b>Copia la dirección de Haul</b> con el botón de abajo. La necesitas en el paso 6.
+          <button class="btn btn--sm" style="margin-top:8px" id="btnCopyHaulAddr">Copiar dirección</button></li>
+        <li>Abre la app <b>Atajos</b> (viene con el iPhone) y toca <b>+</b> arriba a la derecha.</li>
+        <li>Toca el nombre de arriba y ponle <b>Añadir a Haul</b>.</li>
+        <li>Toca el icono <b>ⓘ</b> de abajo y activa <b>Mostrar en la hoja de compartir</b>. Arriba aparecerá la acción <i>Recibir … de Hoja de compartir</i>.</li>
+        <li>Toca <b>Añadir acción</b>, busca <b>Obtener URL de la entrada</b> y añádela.</li>
+        <li>Añade la acción <b>Texto</b>. Dentro, pega la dirección que copiaste y, justo detrás, toca el chip <b>URLs</b> que te ofrece el teclado. Queda así:
+          <code class="steps__code">https://haul-o6sv.onrender.com/#add=<span class="chip">URLs</span></code></li>
+        <li>Añade la acción <b>Abrir URL</b>. Se conecta sola con el texto. Toca <b>OK</b>.</li>
+      </ol>
+      <p class="small muted">Listo. En Zalando, Zara o la que sea: Compartir → desliza hasta <b>Añadir a Haul</b> (la primera vez pide permiso). Se abre Haul en Safari con el producto ya leído.</p>
+    </div>
+
+    <div id="mtab-android" class="hidden">
+      <p class="small muted" style="margin-top:12px">En Android basta con instalar Haul: queda en el menú Compartir de todas las apps.</p>
+      <ol class="steps">
+        <li>Abre Haul en <b>Chrome</b>.</li>
+        <li>Toca el menú <b>⋮</b> y elige <b>Instalar aplicación</b> (o <b>Añadir a pantalla de inicio</b>).</li>
+        <li>Ya está. En cualquier tienda: <b>Compartir → Haul</b>. Recibe enlace, texto y foto.</li>
+      </ol>
+      <button class="btn btn--sm btn--block" data-action="install">Instalar Haul</button>
+    </div>
+  </div>
+
   <div class="sheet" id="sheet-item" role="dialog" aria-modal="true">
     <div class="sheet__grab"></div>
     <img class="detail__img" id="itemImg" alt="">
