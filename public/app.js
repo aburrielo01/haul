@@ -1212,7 +1212,7 @@ $('#btnHomePaste').addEventListener('click', async () => {
 $('#btnReadUrl').addEventListener('click', readUrl);
 $('#mobileTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-mtab]'); if (b) setMobileTab(b.dataset.mtab); });
 $('#btnCopyHaulAddr').addEventListener('click', async () => {
-  try { await navigator.clipboard.writeText(ADD_ADDRESS); toast('Dirección copiada ✦ pégala en el paso 6'); }
+  try { await navigator.clipboard.writeText(ADD_ADDRESS); toast('Dirección copiada ✦ pégala en el paso 5'); }
   catch { toast(ADD_ADDRESS); }
 });
 $('#urlInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') readUrl(); });
@@ -1380,11 +1380,13 @@ async function route({ push = true } = {}) {
   if (!incoming.text && /^#add=?/.test(location.hash)) {
     const text = safeDecode(location.hash.replace(/^#add=?/, ''));
     incoming = { file: null, text };
-    if (!/https?:\/\//i.test(text)) {
+    if (!text.trim()) {
       history.replaceState({}, '', '/');
-      toast('El Atajo ha llegado sin enlace: revisa el paso 6 (el chip URLs tras la dirección)');
+      toast('El Atajo ha llegado vacío: revisa el paso 5 (el chip "Entrada de atajo" tras la dirección)');
     }
   }
+  // Lo que manda el Atajo se enseña aunque no traiga enlace: así se ve qué llegó.
+  const fromShortcut = /^#add=?/.test(location.hash) && !!incoming.text.trim();
   const sharedUrl = ((incoming.text || '').match(/https?:\/\/[^\s]+/) || [])[0];
 
   const match = location.pathname.match(/^\/l\/([\w-]+)(?:\/p\/([\w-]+))?/);
@@ -1399,7 +1401,7 @@ async function route({ push = true } = {}) {
     goto('welcome', { push });
   }
 
-  if (sharedUrl || incoming.file) {
+  if (sharedUrl || incoming.file || fromShortcut) {
     history.replaceState({}, '', '/');
     if (!session.list) {
       if (store.data.lists.length) await openList(store.data.lists[0].slug, { push: false });
@@ -1429,6 +1431,8 @@ function shareIntoList(incoming) {
     openAdd('');
     setTab('shot');
     handleShot(file);
+  } else if (text.trim()) {
+    openAdd(text); // texto de tienda sin enlace: queda el nombre y se explica
   } else {
     openAdd();
   }
