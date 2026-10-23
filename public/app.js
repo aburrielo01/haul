@@ -625,16 +625,7 @@ async function readUrl() {
   const url = shared.url || typed;
   if (!/^https?:\/\//i.test(url) || isSelfUrl(url)) {
     const guess = guessFromShareText(typed);
-    if (guess.title) {
-      // Llegó el texto de la tienda pero sin el enlace (pasa al copiar desde
-      // algunas apps en iPhone): queda el nombre y se pide el enlace.
-      showAddError('El texto copiado no traía el enlace del producto', {
-        hint: 'Te dejo el nombre. Para que lea foto y precio, en la ficha de la tienda toca compartir y elige "Copiar enlace", o pégalo aquí desde el navegador.',
-      });
-      showPreview({ title: guess.title, shop: guess.shop, url: '', image: '', priceText: '', source: 'manual' });
-      if (session.sharedPhoto) attachPhoto(session.sharedPhoto);
-      return;
-    }
+    if (guess.title) return findByText(typed, guess);
     showAddError('Pega el enlace del producto (o el texto que comparte la app de la tienda)');
     return;
   }
@@ -662,6 +653,32 @@ async function readUrl() {
       shop: fb.shop || hostOf(url),
       source: 'url',
     });
+    if (session.sharedPhoto) attachPhoto(session.sharedPhoto);
+  } finally {
+    setLoading(false);
+  }
+}
+
+/**
+ * Llegó el texto de la tienda pero sin el enlace (las apps, en iPhone, no se
+ * lo dan a terceros): el servidor busca el producto por su nombre en la tienda
+ * y, si lo encuentra, se lee la ficha como si hubiera venido el enlace.
+ */
+async function findByText(text, guess) {
+  setLoading(true, `Buscando el producto en ${guess.shop || 'la tienda'}…`);
+  $('#addPreview').classList.add('hidden');
+  try {
+    const data = await api('/extract', { method: 'POST', body: { text } });
+    $('#urlInput').value = data.url || '';
+    showPreview({ ...data, source: 'url' });
+    if (!data.image && session.sharedPhoto) attachPhoto(session.sharedPhoto);
+    if (data.found && data.found.match < 100) toast('Encontrado por el nombre: comprueba que es el mismo');
+  } catch (err) {
+    showAddError(
+      err.code === 'NOT_FOUND' ? err.message : 'El texto no traía el enlace y no he podido buscarlo',
+      { hint: 'Te dejo el nombre. Para la foto y el precio, abre la ficha en el navegador y pega aquí su enlace.' }
+    );
+    showPreview({ title: guess.title, shop: guess.shop, url: '', image: '', priceText: '', source: 'manual' });
     if (session.sharedPhoto) attachPhoto(session.sharedPhoto);
   } finally {
     setLoading(false);

@@ -11,6 +11,7 @@ const path = require('path');
 const fs = require('fs');
 const db = require('./lib/db');
 const extract = require('./lib/extract');
+const find = require('./lib/find');
 const bench = require('./lib/bench');
 
 const app = express();
@@ -285,17 +286,35 @@ app.delete('/api/lists/:slug/items/:id', limitWrite, async (req, res) => {
 
 // Extraer producto desde una URL
 app.post('/api/extract', limitExtract, async (req, res) => {
-  const url = String(req.body?.url || '').trim();
-  if (!url) return fail(res, 400, 'Falta el enlace');
+  let url = String(req.body?.url || '').trim();
+  const text = String(req.body?.text || '').trim().slice(0, 500);
+  if (!url && !text) return fail(res, 400, 'Falta el enlace');
+
+  // Sin enlace pero con el texto que comparte la app de una tienda: se busca el
+  // producto por su nombre en esa tienda y se sigue con el enlace encontrado.
+  let found = null;
+  if (!url) {
+    try {
+      found = await find.findByText(text, { fetchText: extract.fetchText });
+    } catch (err) {
+      console.error('find', err && err.message);
+    }
+    if (!found) return res.status(422).json({ ok: false, code: 'NO_STORE', message: 'No reconozco la tienda de ese texto' });
+    if (!found.url) {
+      console.error('find', found.store, found.query, found.reason);
+      return res.status(404).json({ ok: false, code: 'NOT_FOUND', message: `No he encontrado "${found.title}" en ${found.store}.`, found });
+    }
+    url = found.url;
+  }
   try {
     const key = 'url:' + extract.cleanUrl(url);
     const cached = await db.cacheGet(key);
-    if (cached) return res.json({ ...cached, cached: true });
+    if (cached) return res.json({ ...cached, cached: true, ...(found ? { found: { store: found.store, query: found.query, match: found.match } } : {}) });
     // el rastro de intentos es para diagnóstico, no viaja al móvil
     const { trail, ...data } = await extract.extractFromUrl(url);
     void trail;
     await db.cacheSet(key, data, 1000 * 60 * 60 * 6).catch(() => {});
-    res.json(data);
+    res.json(found ? { ...data, found: { store: found.store, query: found.query, match: found.match } } : data);
   } catch (err) {
     // El detalle técnico se queda en los logs: al usuario nunca le sirve de nada
     // y una traza de error en pantalla da sensación de app rota.
@@ -426,7 +445,7 @@ app.get('/api/barcode/:code', limitExtract, async (req, res) => {
   try {
     const key = 'ean:' + code;
     const cached = await db.cacheGet(key);
-    if (cached) return res.json({ ...cached, cached: true });
+    if (cached) return res.json({ ...cached, cached: true, ...(found ? { found: { store: found.store, query: found.query, match: found.match } } : {}) });
     const data = await extract.extractFromBarcode(code);
     await db.cacheSet(key, data, 1000 * 60 * 60 * 24 * 14).catch(() => {});
     res.json(data);
