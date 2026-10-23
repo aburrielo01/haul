@@ -527,6 +527,7 @@ function resetAdd() {
   session.sharedPhoto = null;
   session.editingItem = null;
   $('#addPreview').classList.add('hidden');
+  $('#altBox').classList.add('hidden');
   $('#addError').classList.add('hidden');
   $('#addLoader').classList.add('hidden');
   $('#shotProgress').classList.add('hidden');
@@ -672,7 +673,10 @@ async function findByText(text, guess) {
     $('#urlInput').value = data.url || '';
     showPreview({ ...data, source: 'url' });
     if (!data.image && session.sharedPhoto) attachPhoto(session.sharedPhoto);
-    if (data.found && data.found.match < 100) toast('Encontrado por el nombre: comprueba que es el mismo');
+    const alts = (data.found && data.found.alternatives) || [];
+    renderAlternatives(alts);
+    if (alts.length) toast('Hay varias fichas con ese nombre: mira que sea la buena');
+    else if (data.found && data.found.match < 100) toast('Encontrado por el nombre: comprueba que es el mismo');
   } catch (err) {
     showAddError(
       err.code === 'NOT_FOUND' ? err.message : 'El texto no traía el enlace y no he podido buscarlo',
@@ -682,6 +686,28 @@ async function findByText(text, guess) {
     if (session.sharedPhoto) attachPhoto(session.sharedPhoto);
   } finally {
     setLoading(false);
+  }
+}
+
+/** Otras fichas con el mismo nombre: un toque y se lee esa en vez de la elegida. */
+function renderAlternatives(alts) {
+  const box = $('#altBox');
+  const list = $('#altList');
+  list.innerHTML = '';
+  box.classList.toggle('hidden', !alts.length);
+  for (const a of alts) {
+    const b = document.createElement('button');
+    b.className = 'alt';
+    b.type = 'button';
+    const price = a.price != null ? money(a.price, 'EUR') : '';
+    const tag = a.group === 'KIDS' ? 'niños' : a.group === 'WOMEN' ? 'mujer' : a.group === 'MEN' ? 'hombre' : '';
+    b.innerHTML = `<img alt="" loading="lazy" src="${esc(a.image ? imgSrc(a.image) : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="3" height="4"><rect width="3" height="4" fill="#f1ecfb"/></svg>'))}">` +
+      `<div class="alt__meta"><b>${esc(price || 'ver precio')}</b>${esc((a.name || '').split(' - ').pop() || '')}${tag ? `<span class="alt__tag">${tag}</span>` : ''}</div>`;
+    b.addEventListener('click', () => {
+      $('#urlInput').value = a.url;
+      readUrl(); // la lista se queda a la vista por si quiere volver a cambiar
+    });
+    list.appendChild(b);
   }
 }
 

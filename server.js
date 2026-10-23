@@ -309,12 +309,12 @@ app.post('/api/extract', limitExtract, async (req, res) => {
   try {
     const key = 'url:' + extract.cleanUrl(url);
     const cached = await db.cacheGet(key);
-    if (cached) return res.json({ ...cached, cached: true, ...(found ? { found: { store: found.store, query: found.query, match: found.match } } : {}) });
+    if (cached) return res.json({ ...cached, cached: true, ...(found ? { found: { store: found.store, query: found.query, match: found.match, alternatives: found.alternatives || [] } } : {}) });
     // el rastro de intentos es para diagnóstico, no viaja al móvil
     const { trail, ...data } = await extract.extractFromUrl(url);
     void trail;
     await db.cacheSet(key, data, 1000 * 60 * 60 * 6).catch(() => {});
-    res.json(found ? { ...data, found: { store: found.store, query: found.query, match: found.match } } : data);
+    res.json(found ? { ...data, found: { store: found.store, query: found.query, match: found.match, alternatives: found.alternatives || [] } } : data);
   } catch (err) {
     // El detalle técnico se queda en los logs: al usuario nunca le sirve de nada
     // y una traza de error en pantalla da sensación de app rota.
@@ -445,7 +445,7 @@ app.get('/api/barcode/:code', limitExtract, async (req, res) => {
   try {
     const key = 'ean:' + code;
     const cached = await db.cacheGet(key);
-    if (cached) return res.json({ ...cached, cached: true, ...(found ? { found: { store: found.store, query: found.query, match: found.match } } : {}) });
+    if (cached) return res.json({ ...cached, cached: true, ...(found ? { found: { store: found.store, query: found.query, match: found.match, alternatives: found.alternatives || [] } } : {}) });
     const data = await extract.extractFromBarcode(code);
     await db.cacheSet(key, data, 1000 * 60 * 60 * 24 * 14).catch(() => {});
     res.json(data);
