@@ -920,10 +920,115 @@ img { max-width: 100%; display: block; }
 .steps__code { display: block; margin-top: 8px; padding: 8px 10px; border: 1.5px solid var(--ink); background: var(--paper); font-family: var(--mono); font-size: 11.5px; word-break: break-all; }
 .steps__code .chip { display: inline-block; padding: 1px 7px; margin-left: 2px; border-radius: 999px; background: var(--sky); color: #fff; font-family: var(--sans); font-size: 11px; }
 
-/* ---- alternativas al buscar por nombre ---- */
-.alts { display: flex; gap: 10px; overflow-x: auto; padding: 8px 2px 4px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
-.alt { flex: 0 0 104px; scroll-snap-align: start; border: 1.5px solid var(--ink); background: var(--card); box-shadow: var(--sticker); padding: 0; text-align: left; cursor: pointer; font: inherit; color: inherit; }
-.alt img { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; background: #f1ecfb; }
-.alt__meta { padding: 6px 7px 7px; font-family: var(--mono); font-size: 10.5px; line-height: 1.3; }
-.alt__meta b { display: block; font-size: 12px; }
-.alt__tag { display: inline-block; margin-top: 3px; padding: 0 5px; border: 1px solid var(--ink); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
+/* ==========================================================================
+   v4 · vigilancia de precios, orden manual, duplicados y portada
+   ========================================================================== */
+
+/* sticker de bajada en la tarjeta: lima, trazo negro, un poco torcido */
+.product__drop {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 7px;
+  border: 1px solid var(--ink);
+  background: var(--lime);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  box-shadow: var(--sticker);
+  transform: rotate(-3deg);
+}
+.product.is-bought .product__drop { display: none; }
+.product__meta .up { color: var(--coral); }
+.product__meta .down { color: var(--ink); font-weight: 700; }
+
+/* filtro de bajadas y botón de orden */
+.pill--drop.is-active { background: var(--lime); color: var(--ink); border-color: var(--rule); }
+.pill--drop:not(.is-active):not(.is-empty) { border-color: var(--rule); }
+.pill--drop.is-empty { opacity: .45; }
+.pill--sort { flex: 0 0 auto; align-self: flex-end; border-color: var(--rule); background: var(--card); }
+.pill--sort.is-sorted { background: var(--ink); color: #fff; }
+
+/* aviso de bajadas en el inicio */
+.dropsbanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  text-align: left;
+  border: 1.5px solid var(--ink);
+  background: var(--lime);
+  box-shadow: var(--sticker);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.dropsbanner:active { transform: translate(1px, 2px); box-shadow: none; }
+.dropsbanner b { font-family: var(--mono); font-size: 18px; letter-spacing: -.02em; }
+
+/* evolución del precio en la ficha */
+.pricebox { margin-top: 12px; padding: 12px 12px 10px; border: 1px solid var(--ink); }
+.pricebox__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pricebox__grid b {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--grotesk);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pricebox__grid b.is-old { text-decoration: line-through; color: var(--ink-faint); font-weight: 600; }
+.pricebox__grid b.is-low { color: #1f7a2e; }
+.pricebox .spark { display: block; width: 100%; height: 46px; margin-top: 10px; }
+.pricebox .spark.hidden { display: none; }
+.pricebox__foot { margin-top: 8px; }
+.pricebox .linkbtn[disabled] { opacity: .5; pointer-events: none; }
+
+/* la misma pieza ya está en la lista */
+.alert--dup { border-color: var(--lavender); background: #f7f3ff; }
+.alert--dup .dup__row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.alert--dup .dup__img { width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--ink); background: var(--wash); flex: 0 0 auto; }
+.alert--dup .dup__actions { display: flex; gap: 6px; margin-top: 10px; }
+
+/* arrastrar para ordenar */
+.product { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.product img { -webkit-user-drag: none; }
+.products.can-sort .product { cursor: grab; }
+.product.is-lifted { opacity: .28; box-shadow: none; border-style: dashed; }
+.drag-ghost {
+  position: fixed;
+  z-index: 100;
+  margin: 0;
+  pointer-events: none;
+  transform: rotate(-2deg) scale(1.04);
+  box-shadow: 6px 7px 0 var(--ink);
+  transition: none;
+  will-change: transform, left, top;
+}
+.drag-ghost .product__canvas { aspect-ratio: auto; }
+
+/* portada para historias */
+.cover {
+  position: relative;
+  width: 168px;
+  aspect-ratio: 9 / 16;
+  margin: 12px auto 0;
+  border: 1.5px solid var(--ink);
+  background: var(--wash);
+  background-image: var(--grid);
+  background-size: 12px 12px;
+  box-shadow: var(--sticker-lg);
+  transform: rotate(-1.5deg);
+  overflow: hidden;
+}
+.cover img { width: 100%; height: 100%; object-fit: cover; }
+.cover__skel { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.cover__skel .loader__dot { animation: bounce .9s infinite ease-in-out; }
+.cover__skel .loader__dot:nth-child(2) { background: var(--lavender); animation-delay: .12s; }
+.cover__skel .loader__dot:nth-child(3) { background: var(--lime); animation-delay: .24s; }

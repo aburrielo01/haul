@@ -11,8 +11,9 @@ const path = require('path');
 const fs = require('fs');
 const db = require('./lib/db');
 const extract = require('./lib/extract');
-const find = require('./lib/find');
 const bench = require('./lib/bench');
+const watch = require('./lib/watch');
+const push = require('./lib/push');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -82,6 +83,8 @@ function publicList(list, items, role) {
   };
 }
 
+const num = (v) => (v === null || v === undefined || v === '' ? null : Number(v));
+
 function publicItem(it) {
   return {
     id: it.id,
@@ -89,7 +92,7 @@ function publicItem(it) {
     url: it.url,
     image: it.image,
     priceText: it.price_text,
-    priceValue: it.price_value === null || it.price_value === undefined ? null : Number(it.price_value),
+    priceValue: num(it.price_value),
     currency: it.currency,
     shop: it.shop,
     note: it.note,
@@ -97,6 +100,13 @@ function publicItem(it) {
     bought: !!Number(it.bought),
     addedBy: it.added_by,
     createdAt: Number(it.created_at),
+    position: Number(it.position || 0),
+    // vigilancia de precios (v4)
+    basePrice: num(it.base_price),
+    prevPrice: num(it.prev_price),
+    lowPrice: num(it.low_price),
+    priceChangedAt: num(it.price_changed_at),
+    checkedAt: num(it.checked_at),
   };
 }
 
@@ -122,10 +132,13 @@ async function loadList(req, res) {
 // `unlocker` dice si el desbloqueador está configurado, sin revelar la clave
 app.get('/api/health', async (_req, res) => res.json({
   ok: true,
+  version: require('./package.json').version,
   time: Date.now(),
   uptime: Math.round(process.uptime()),
   unlocker: extract.unlockerEnabled(),
   unlockerUsage: extract.unlockerStats(),
+  watch: watch.stats(),
+  push: push.enabled(),
 }));
 
 // Crear lista
@@ -224,9 +237,22 @@ app.post('/api/lists/:slug/items', limitWrite, async (req, res) => {
 
     const body = req.body || {};
     if (!String(body.title || '').trim()) return fail(res, 400, 'El producto necesita un nombre');
+    const url = body.url ? extract.cleanUrl(String(body.url)) : '';
+    // El mismo enlace dos veces suele ser un despiste. Se avisa con la pieza
+    // que ya está; con `force` se guarda igualmente (dos tallas, por ejemplo).
+    if (url && !body.force) {
+      const dup = await db.findItemByUrl(list.id, url);
+      if (dup) {
+        return res.status(409).json({
+          ok: false, code: 'DUPLICATE',
+          message: 'Este producto ya está en la lista',
+          item: publicItem(dup),
+        });
+      }
+    }
     const item = await db.addItem(list.id, {
       title: body.title,
-      url: body.url ? extract.cleanUrl(String(body.url)) : '',
+      url,
       image: body.image,
       priceText: body.priceText,
       priceValue: Number(body.priceValue),
@@ -260,14 +286,134 @@ app.patch('/api/lists/:slug/items/:id', limitWrite, async (req, res) => {
       const parsed = extract.parsePrice(b.priceText);
       patch.priceText = parsed ? parsed.text : String(b.priceText).slice(0, 40);
       patch.priceValue = parsed ? parsed.value : null;
+      if (parsed && parsed.currency) patch.currency = parsed.currency;
+      // Un precio corregido a mano es la nueva referencia: se olvida el
+      // "antes" y la vigilancia parte de aquí.
+      const current = await db.getItem(list.id, req.params.id);
+      const was = current ? num(current.price_value) : null;
+      if (was === null || patch.priceValue === null || Math.abs(was - patch.priceValue) > 0.004) {
+        patch.basePrice = patch.priceValue;
+        patch.prevPrice = null;
+        patch.lowPrice = patch.priceValue;
+        patch.priceChangedAt = null;
+      }
     }
     const item = await db.updateItem(list.id, req.params.id, patch);
     if (!item) return fail(res, 404, 'Producto no encontrado');
+    // el precio que el usuario escribe también forma parte de la evolución
+    if (patch.basePrice !== undefined && patch.priceValue !== null) {
+      await db.addHistory(item, patch.priceValue, item.currency, { force: true }).catch(() => {});
+    }
     res.json({ ok: true, item: publicItem(item) });
   } catch (err) {
     console.error('patchItem', err);
     fail(res, 500, 'No se ha podido guardar el cambio');
   }
+});
+
+// Orden manual de la lista: `ids` en el orden en que deben quedar
+app.put('/api/lists/:slug/order', limitWrite, async (req, res) => {
+  try {
+    const list = await loadList(req, res);
+    if (!list) return;
+    if (roleFor(list, tokenOf(req)) !== 'owner') return fail(res, 403, 'Solo quien creó la lista puede ordenarla');
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids : null;
+    if (!ids || !ids.length) return fail(res, 400, 'Falta el orden');
+    await db.reorderItems(list.id, ids);
+    const items = await db.listItems(list.id);
+    res.json({ ok: true, items: items.map(publicItem) });
+  } catch (err) {
+    console.error('reorder', err);
+    fail(res, 500, 'No se ha podido guardar el orden');
+  }
+});
+
+// Evolución del precio de una pieza (quien pueda ver la lista puede verla)
+app.get('/api/lists/:slug/items/:id/history', async (req, res) => {
+  try {
+    const list = await loadList(req, res);
+    if (!list) return;
+    const role = roleFor(list, tokenOf(req));
+    if (role === 'viewer' && list.visibility !== 'public') return fail(res, 403, 'Esta lista es privada');
+    const item = await db.getItem(list.id, req.params.id);
+    if (!item) return fail(res, 404, 'Producto no encontrado');
+    const points = await db.listHistory(item.id);
+    res.json({ ok: true, item: publicItem(item), points });
+  } catch (err) {
+    console.error('history', err);
+    fail(res, 500, 'No se ha podido cargar la evolución');
+  }
+});
+
+// Comprobar el precio ahora mismo. Es una acción del usuario, así que puede
+// usar todos los intentos (como al añadir la pieza); la vigilancia automática
+// se queda con los gratuitos.
+app.post('/api/lists/:slug/items/:id/check', limitExtract, async (req, res) => {
+  try {
+    const list = await loadList(req, res);
+    if (!list) return;
+    if (roleFor(list, tokenOf(req)) !== 'owner') return fail(res, 403, 'Solo quien creó la lista puede comprobar precios');
+    const item = await db.getItem(list.id, req.params.id);
+    if (!item) return fail(res, 404, 'Producto no encontrado');
+    if (!/^https?:\/\//i.test(item.url || '')) return fail(res, 400, 'Esta pieza no tiene enlace que comprobar');
+    const r = await watch.checkItem(
+      { ...item, list_slug: list.slug, list_name: list.name, list_emoji: list.emoji },
+      { db, extract: extract.extractFromUrl, cheap: false, notify: null, formatPrice: extract.formatPrice }
+    );
+    res.json({ ok: true, found: r.ok, changed: r.changed, dropped: r.dropped, pct: r.pct, item: publicItem(r.item) });
+  } catch (err) {
+    console.error('check', err);
+    fail(res, 500, 'No se ha podido comprobar el precio');
+  }
+});
+
+/* ------------------------------------------------------------ avisos push */
+
+app.get('/api/push/config', (_req, res) => {
+  res.json({ ok: true, enabled: push.enabled(), key: push.enabled() ? push.publicKey() : '' });
+});
+
+// El móvil manda su suscripción y las listas que tiene con su token de dueño:
+// solo se apuntan las que demuestra que son suyas.
+app.post('/api/push/subscribe', limitWrite, async (req, res) => {
+  try {
+    if (!push.enabled()) return fail(res, 404, 'Los avisos no están activados en este servidor');
+    const sub = req.body?.subscription;
+    if (!sub || typeof sub.endpoint !== 'string' || !/^https:\/\//i.test(sub.endpoint) || !sub.keys) {
+      return fail(res, 400, 'Suscripción no válida');
+    }
+    const lists = Array.isArray(req.body?.lists) ? req.body.lists.slice(0, 200) : [];
+    const slugs = [];
+    for (const l of lists) {
+      if (!l || typeof l.slug !== 'string' || typeof l.token !== 'string') continue;
+      const row = await db.getListBySlug(l.slug);
+      if (row && row.owner_token === l.token) slugs.push(row.slug);
+    }
+    await db.pushSubUpsert({ endpoint: sub.endpoint.slice(0, 1000), sub: { endpoint: sub.endpoint, keys: sub.keys, expirationTime: sub.expirationTime || null }, slugs });
+    res.json({ ok: true, lists: slugs.length });
+  } catch (err) {
+    console.error('push subscribe', err);
+    fail(res, 500, 'No se ha podido guardar la suscripción');
+  }
+});
+
+app.delete('/api/push/subscribe', limitWrite, async (req, res) => {
+  const endpoint = String(req.body?.endpoint || '').trim();
+  if (!endpoint) return fail(res, 400, 'Falta el endpoint');
+  await db.pushSubDelete(endpoint).catch(() => {});
+  res.json({ ok: true });
+});
+
+// Un aviso de prueba, para comprobar que todo el camino funciona
+app.post('/api/push/test', limitExtract, async (req, res) => {
+  if (!push.enabled()) return fail(res, 404, 'Los avisos no están activados en este servidor');
+  const endpoint = String(req.body?.endpoint || '').trim();
+  const s = endpoint ? await db.pushSubByEndpoint(endpoint) : null;
+  if (!s || !s.sub) return fail(res, 404, 'Este móvil no está suscrito');
+  const r = await push.send(s.sub, { title: 'Haul está atento 👀', body: 'Así te avisaremos cuando baje un precio.', url: '/', tag: 'haul-test' });
+  if (r.gone) await db.pushSubDelete(endpoint).catch(() => {});
+  if (!r.ok) return fail(res, 502, 'No se ha podido enviar el aviso');
+  res.json({ ok: true });
 });
 
 // Borrar producto
@@ -286,35 +432,17 @@ app.delete('/api/lists/:slug/items/:id', limitWrite, async (req, res) => {
 
 // Extraer producto desde una URL
 app.post('/api/extract', limitExtract, async (req, res) => {
-  let url = String(req.body?.url || '').trim();
-  const text = String(req.body?.text || '').trim().slice(0, 500);
-  if (!url && !text) return fail(res, 400, 'Falta el enlace');
-
-  // Sin enlace pero con el texto que comparte la app de una tienda: se busca el
-  // producto por su nombre en esa tienda y se sigue con el enlace encontrado.
-  let found = null;
-  if (!url) {
-    try {
-      found = await find.findByText(text, { fetchText: extract.fetchText });
-    } catch (err) {
-      console.error('find', err && err.message);
-    }
-    if (!found) return res.status(422).json({ ok: false, code: 'NO_STORE', message: 'No reconozco la tienda de ese texto' });
-    if (!found.url) {
-      console.error('find', found.store, found.query, found.reason);
-      return res.status(404).json({ ok: false, code: 'NOT_FOUND', message: `No he encontrado "${found.title}" en ${found.store}.`, found });
-    }
-    url = found.url;
-  }
+  const url = String(req.body?.url || '').trim();
+  if (!url) return fail(res, 400, 'Falta el enlace');
   try {
     const key = 'url:' + extract.cleanUrl(url);
     const cached = await db.cacheGet(key);
-    if (cached) return res.json({ ...cached, cached: true, ...(found ? { found: { store: found.store, query: found.query, match: found.match, alternatives: found.alternatives || [] } } : {}) });
+    if (cached) return res.json({ ...cached, cached: true });
     // el rastro de intentos es para diagnóstico, no viaja al móvil
     const { trail, ...data } = await extract.extractFromUrl(url);
     void trail;
     await db.cacheSet(key, data, 1000 * 60 * 60 * 6).catch(() => {});
-    res.json(found ? { ...data, found: { store: found.store, query: found.query, match: found.match, alternatives: found.alternatives || [] } } : data);
+    res.json(data);
   } catch (err) {
     // El detalle técnico se queda en los logs: al usuario nunca le sirve de nada
     // y una traza de error en pantalla da sensación de app rota.
@@ -407,7 +535,7 @@ function renderBenchHtml(state) {
       <td>${esc(g.mode || '')}</td>
       <td class="small">${esc(g.got ? g.got.title : (g.error || ''))}</td>
       <td class="small">${esc(g.got ? g.got.priceText : '')}${g.priceDiff ? ` <i>(±${g.priceDiff})</i>` : ''}</td>
-      <td class="small">${esc(r.expected.title)} · ${esc(r.expected.price)}</td>
+      <td class="small">${esc(r.expected.title)} · ${esc(r.expected.price)}${r.expected.verified ? ` <i title="hoja comprobada a mano">(${esc(r.expected.verified)})</i>` : ''}</td>
       <td class="small">${Math.round(r.ms / 100) / 10}s</td>
     </tr>${r.trail && r.trail.length ? `<tr><td></td><td colspan="9" class="small trail">${r.trail.map((t) =>
       esc(`${t.step}: ${t.result || ''}${t.status ? ' ' + t.status : ''}${t.error ? ' · ' + t.error : ''}${t.title ? ' · «' + t.title + '»' : ''}${t.price ? ' · ' + t.price : ''}`)).join(' → ')}</td></tr>` : ''}`;
@@ -432,7 +560,9 @@ ${s ? `<div class="kpis">
   <div class="kpi"><b>${pct(s.pctPrice)}</b><span>precio</span></div>
   <div class="kpi"><b>${pct(s.pctImage)}</b><span>foto</span></div>
   <div class="kpi"><b>${s.failed}</b><span>errores</span></div>
-</div>` : '<p>Todavía no hay resultados.</p>'}
+</div>
+${s.unlocker && s.unlocker.tried ? `<p class="sub">Desbloqueador en los fallos: ${s.unlocker.tried} intentos · ${s.unlocker.ok} con ficha · ${s.unlocker.rejected} rechazados · ${s.unlocker.wall} muro · ${s.unlocker.empty} vacíos · ${s.unlocker.timeout} sin respuesta · ${s.unlocker.noBudget} sin cupo${s.unlocker.ok === 0 && s.unlocker.tried >= 5 ? ' — <b>ninguno acierta: revisa saldo y verificación de la cuenta de Bright Data</b>' : ''}</p>` : ''}
+${s.truth ? `<p class="sub">Hoja de verdad: ${s.truth.verified}/${s.total} filas comprobadas a mano${s.truth.newest ? `, la más reciente el ${esc(s.truth.newest)}` : ''}${s.truth.oldest && s.truth.oldest !== s.truth.newest ? ` y la más antigua el ${esc(s.truth.oldest)}` : ''}. Los precios cambian: un fallo de precio con nombre y foto correctos suele ser la hoja, no el lector.</p>` : ''}` : '<p>Todavía no hay resultados.</p>'}
 <div class="two">
   <div><h3>Por tienda</h3><table><tr><th>tienda</th><th>ok</th></tr>${shops}</table></div>
   <div><h3>Detalle</h3><table><tr><th>id</th><th>tienda</th><th>nombre</th><th>precio</th><th>foto</th><th>vía</th><th>leído</th><th>precio leído</th><th>esperado</th><th>t</th></tr>${rows}</table></div>
@@ -445,7 +575,7 @@ app.get('/api/barcode/:code', limitExtract, async (req, res) => {
   try {
     const key = 'ean:' + code;
     const cached = await db.cacheGet(key);
-    if (cached) return res.json({ ...cached, cached: true, ...(found ? { found: { store: found.store, query: found.query, match: found.match, alternatives: found.alternatives || [] } } : {}) });
+    if (cached) return res.json({ ...cached, cached: true });
     const data = await extract.extractFromBarcode(code);
     await db.cacheSet(key, data, 1000 * 60 * 60 * 24 * 14).catch(() => {});
     res.json(data);
@@ -580,8 +710,14 @@ app.get('*', (_req, res) => res.sendFile(INDEX_FILE));
 
 db.init()
   .then((info) => {
+    const pushReady = push.setup();
+    const notify = (ev) => push.notifyDrop(db, { ...ev, formatPrice: extract.formatPrice });
+    const watching = watch.start({ db, extract: extract.extractFromUrl, notify, formatPrice: extract.formatPrice });
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Haul escuchando en http://0.0.0.0:${PORT} · base de datos: ${info.driver}`);
+      console.log(
+        `Haul escuchando en http://0.0.0.0:${PORT} · base de datos: ${info.driver}`
+        + ` · vigilancia de precios: ${watching ? 'activa' : 'apagada'} · avisos push: ${pushReady ? 'activos' : 'sin claves'}`
+      );
     });
   })
   .catch((err) => {

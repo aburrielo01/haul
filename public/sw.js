@@ -1,12 +1,15 @@
 /* Service worker de Haul: la app abre al instante y sigue navegable sin datos. */
 
-const VERSION = 'haul-v3.21.0';
+const VERSION = 'haul-v4.0.0';
 const SHARE_CACHE = 'haul-share';
 const SHELL = ['/', '/styles.css', '/app.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/favicon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(VERSION).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.open(VERSION)
+      // sin pasar por la caché HTTP: una versión nueva tiene que traer el código nuevo
+      .then((cache) => cache.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -86,6 +89,39 @@ self.addEventListener('fetch', (event) => {
         return res;
       }).catch(() => hit);
       return hit || network;
+    })
+  );
+});
+
+/* ------------------------------------------------ avisos de bajada (v4) */
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; }
+  catch { data = { title: 'Haul', body: event.data ? event.data.text() : '' }; }
+  event.waitUntil(self.registration.showNotification(data.title || 'Haul', {
+    body: data.body || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag: data.tag || 'haul',
+    renotify: !!data.tag,
+    data: { url: data.url || '/' },
+  }));
+});
+
+// Al tocar el aviso se abre la pieza: si Haul ya está abierta, en esa misma
+// pestaña; si no, en una nueva.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const open = list.find((c) => c.url.startsWith(self.location.origin));
+      if (open) {
+        open.postMessage({ type: 'open', url });
+        return open.focus();
+      }
+      return self.clients.openWindow(url);
     })
   );
 });

@@ -37,7 +37,7 @@
       <span class="kicker">archivo personal // 2026</span>
       <h1 class="display display--xl" style="margin-top:8px">Todo lo que<br>quieres,</h1>
       <p class="serif" style="margin-top:2px">en un solo sitio.</p>
-      <p class="lead" style="margin-top:14px;max-width:34ch">Pega un enlace, escanea el código o sube una captura. Haul lo ordena y lo comparte en un toque.</p>
+      <p class="lead" style="margin-top:14px;max-width:34ch">Pega un enlace, escanea el código o sube una captura. Haul lo ordena, vigila el precio y lo comparte en un toque.</p>
     </div>
 
     <div class="rule"></div>
@@ -90,6 +90,7 @@
     </div>
 
     <div class="stats" id="homeStats"></div>
+    <div id="homeDrops"></div>
 
     <div class="between" style="margin-top:26px;align-items:flex-end">
       <div>
@@ -143,6 +144,7 @@
           <div><div class="kicker">piezas</div><b class="hero__num" id="listCount">0</b></div>
           <div><div class="kicker">total</div><b class="hero__num" id="listTotal">—</b></div>
         </div>
+        <button class="pill pill--sort" id="btnSort" aria-label="Cambiar el orden">⇅ tu orden</button>
       </div>
       <div class="hero__actions">
         <button class="btn btn--sm btn--pill btn--sticker" data-action="share-list">↗ Compartir</button>
@@ -154,6 +156,7 @@
       <button class="pill is-active" data-filter="all">Todo</button>
       <button class="pill" data-filter="pending">Por comprar</button>
       <button class="pill" data-filter="bought">Comprado</button>
+      <button class="pill pill--drop" data-filter="drops" id="pillDrops">↓ Bajadas</button>
     </div>
 
     <div class="products" id="productGrid"></div>
@@ -205,9 +208,19 @@
       <button class="btn btn--sm btn--block" style="margin-top:10px" data-action="mobile-help">Cómo activarlo</button>
     </div>
 
+    <div style="margin-top:18px" id="pushBlock">
+      <h3 class="title">Avisos de bajadas de precio</h3>
+      <p class="small muted" style="margin-top:4px">Haul vuelve a mirar el precio de tus piezas cada pocas horas. Si baja, lo verás con un sticker <b>↓</b> en la lista<span id="pushCopy"> y, si quieres, te avisamos en el móvil</span>.</p>
+      <div class="between" style="margin-top:10px">
+        <span class="small" id="pushState">—</span>
+        <button class="btn btn--sm" id="btnPush">Activar avisos</button>
+      </div>
+      <button class="linkbtn hidden" style="margin-top:8px" id="btnPushTest">Enviarme un aviso de prueba</button>
+    </div>
+
     <div class="stats" id="profileStats" style="margin-top:18px"></div>
     <div class="spacer"></div>
-    <p class="kicker center" style="margin-top:16px">haul · ed. 01</p>
+    <p class="kicker center" style="margin-top:16px">haul · ed. 04 · v4.0</p>
   </section>
 
   <!-- ═══════════ AVISO AL ABRIR UN ENLACE QUE NO SE PUEDE MOSTRAR ════════ -->
@@ -318,6 +331,8 @@
       <span class="small muted" id="addLoaderText">Leyendo la tienda…</span>
     </div>
     <div class="alert alert--error hidden" id="addError"></div>
+    <!-- la misma pieza ya está en la lista -->
+    <div class="alert alert--dup hidden" id="addDup"></div>
 
     <!-- vista previa editable -->
     <div id="addPreview" class="hidden" style="margin-top:16px">
@@ -344,12 +359,6 @@
         </label>
         <button class="btn btn--primary btn--block" style="margin-top:14px" id="btnSaveItem">Guardar en la lista</button>
       </div>
-    </div>
-
-    <!-- otras fichas con el mismo nombre, cuando el producto se ha buscado por el texto -->
-    <div id="altBox" class="hidden" style="margin-top:12px">
-      <span class="kicker">¿no es esta? otras con el mismo nombre</span>
-      <div class="alts" id="altList"></div>
     </div>
 
     <button class="btn btn--ghost btn--block" style="margin-top:8px" id="btnManual">Añadirlo a mano</button>
@@ -404,8 +413,24 @@
     <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">
       <span class="chip chip--accent" id="itemPrice">—</span>
       <span class="chip" id="itemShop">—</span>
+      <span class="chip chip--lime hidden" id="itemDrop">↓</span>
     </div>
     <p class="lead hidden" style="margin-top:10px" id="itemNote"></p>
+
+    <!-- vigilancia del precio -->
+    <div class="pricebox frame hidden" id="itemPriceBox">
+      <i></i><i></i><i></i><i></i>
+      <div class="pricebox__grid">
+        <div><span class="kicker">ahora</span><b id="ppNow">—</b></div>
+        <div><span class="kicker">antes</span><b id="ppBefore">—</b></div>
+        <div><span class="kicker">mínimo</span><b id="ppLow">—</b></div>
+      </div>
+      <canvas class="spark" id="itemSpark" width="640" height="120" aria-hidden="true"></canvas>
+      <div class="between pricebox__foot">
+        <span class="small faint" id="ppChecked">—</span>
+        <button class="linkbtn" id="btnRecheck">Comprobar ahora</button>
+      </div>
+    </div>
     <a class="btn btn--block" style="margin-top:14px" id="itemLink" target="_blank" rel="noopener noreferrer">Abrir en la tienda ↗</a>
     <div class="grid2" style="margin-top:8px">
       <button class="btn btn--sm" id="btnToggleBought">✓ Comprado</button>
@@ -430,6 +455,23 @@
     <div class="grid2" style="margin-top:10px">
       <button class="btn btn--sm btn--primary" id="btnCopyLink">Copiar</button>
       <button class="btn btn--sm" id="btnNativeShare">Compartir…</button>
+    </div>
+
+    <!-- portada para historias: se dibuja al abrir, con las piezas de la lista -->
+    <div id="shareCoverBox" class="hidden" style="margin-top:16px">
+      <div class="rule--dash" style="margin-bottom:12px"></div>
+      <div class="between">
+        <span class="kicker">portada para historias</span>
+        <span class="tag tag--blue">9:16</span>
+      </div>
+      <div class="cover" id="shareCover">
+        <img id="shareCoverImg" alt="Portada de la lista" class="hidden">
+        <div class="cover__skel" id="shareCoverSkel"><span class="loader__dot"></span><span class="loader__dot"></span><span class="loader__dot"></span></div>
+      </div>
+      <div class="grid2" style="margin-top:10px">
+        <button class="btn btn--sm btn--sticker" id="btnShareCover">Compartir portada</button>
+        <button class="btn btn--sm" id="btnDownloadCover">Guardar imagen</button>
+      </div>
     </div>
 
     <div id="shareContribBox" style="margin-top:16px">

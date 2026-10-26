@@ -28,6 +28,12 @@ async function ok(name, fn) {
     assert.strictEqual(bench.priceMatches(129, 129.0).ok, true);
     assert.strictEqual(bench.priceMatches(35.99, 29.99).ok, false);
   });
+  await ok('una fila con divisa convertida puede declarar su tolerancia', () => {
+    assert.strictEqual(bench.priceMatches(487.16, 493.02).ok, false, 'el 1 % no basta');
+    assert.strictEqual(bench.priceMatches(487.16, 493.02, 0.03).ok, true, 'con el 3 % sí');
+    const g = bench.grade({ title: 'Óleo', price: 487.16, tolerance: 0.03 }, { ok: true, title: 'Óleo', priceValue: 493.02, image: 'x' });
+    assert.strictEqual(g.ok, true);
+  });
 
   await ok('una ejecución completa guarda estado y resume por tienda', async () => {
     const items = bench.loadItems();

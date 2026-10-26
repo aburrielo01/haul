@@ -19,6 +19,17 @@ acumulado, enlace público con tarjeta de previsualización para WhatsApp e Inst
 listas colaborativas, instalación como app (PWA) y compartir desde otras apps
 directamente a Haul.
 
+Desde la **4.0**, Haul también trabaja después de guardar:
+
+| | |
+|---|---|
+| **Vigila el precio** | Vuelve a leer cada pieza cada 12 h con los intentos gratuitos. Si baja, sticker ↓ en la lista, filtro *Bajadas*, aviso en el inicio y, si quieres, notificación en el móvil. En la ficha: ahora / antes / mínimo, evolución y *Comprobar ahora*. |
+| **Avisa de repetidos** | Si pegas un enlace que ya está en la lista (aunque cambie la talla o el color en la URL), lo dice antes de guardar. |
+| **Se ordena arrastrando** | Mantén pulsada una pieza y muévela; el orden se guarda. También por precio o fecha. |
+| **Portada para historias** | Una imagen 9:16 con la lista, sus piezas y un QR, lista para Instagram o WhatsApp. |
+
+El detalle está en [CHANGELOG.md](CHANGELOG.md).
+
 ## Cómo está montado
 
 ```
@@ -26,12 +37,15 @@ server.js              API REST, páginas y estáticos
 lib/db.js              datos (SQLite o Postgres, misma API)
 lib/extract.js         extracción de producto, precios, códigos de barras
 lib/adapters.js        adaptadores por tienda (Amazon, Zalando, El Corte Inglés…)
+lib/watch.js           vigilancia de precios: relee las piezas y detecta bajadas
+lib/push.js            avisos push (Web Push con claves VAPID)
 public/index.html      todas las pantallas de la app
 public/styles.css      sistema visual
-public/app.js          lógica de la interfaz
-public/sw.js           service worker (abre sin conexión)
+public/app.js          lógica de la interfaz (incluye la portada para historias)
+public/sw.js           service worker (abre sin conexión, recibe los avisos)
 test/smoke.js          ciclo completo de una lista vía API
 test/parse.js          precios, EAN, nombres desde la URL
+test/watch.js          cuándo un precio nuevo cuenta como cambio o bajada
 test/unlocker.js       desbloqueador, contra un servidor falso
 test/adapters.js       adaptadores y elección del precio correcto
 lib/bench.js           banco de pruebas: lee test/bench-urls.json y compara con la hoja de verdad
@@ -61,7 +75,9 @@ npx playwright install chromium   # solo en local; la imagen Docker ya lo trae
 npm start                          # http://localhost:3000
 npm test                           # pruebas de humo (con el servidor arrancado)
 node test/parse.js                 # pruebas del parseador
+node test/watch.js                 # vigilancia de precios
 node test/unlocker.js              # desbloqueador, contra un servidor falso
+node test/bench-local.js           # el banco de 100 enlaces desde tu máquina (--ids E011,E033 · --shop Zara)
 ```
 
 ## Desplegar en Render
@@ -95,6 +111,43 @@ node test/unlocker.js              # desbloqueador, contra un servidor falso
 | `DIAG_TOKEN` | Activa `/api/diagnose` (ver abajo) | — |
 | `SHOP_COUNTRY` | País para tiendas con precio por país (Shopify Markets) | `ES` |
 | `CHROMIUM_FIRST` | `1` para probar Chromium antes que el desbloqueador (gasta más memoria) | — |
+| `WATCH` | `off` apaga la vigilancia de precios | activa |
+| `WATCH_EVERY_H` | Cada cuántas horas se vuelve a leer una pieza | `12` |
+| `WATCH_TICK_MIN` | Cada cuántos minutos despierta el vigilante | `10` |
+| `WATCH_BATCH` | Piezas por despertar (de una en una, con pausa) | `20` |
+| `WATCH_PAUSE_MS` | Pausa entre dos lecturas (ms) | `1500` |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Activan los avisos push (ver abajo) | — |
+| `VAPID_SUBJECT` | Contacto que viaja con cada aviso (`mailto:` o URL) | — |
+
+## Vigilancia de precios y avisos
+
+El vigilante (`lib/watch.js`) despierta cada 10 minutos y relee hasta 20 piezas
+que lleven más de 12 horas sin comprobar, de una en una y con pausa, para no
+molestar a ninguna tienda. **Solo usa los intentos gratuitos** (API de la tienda,
+Shopify, `fetch`): ni desbloqueador, que cobra por acierto, ni Chromium. Si una
+pieza falla cuatro veces seguidas, se la revisa seis veces menos. Con unas
+decenas de listas activas, el coste es cero.
+
+Un precio nuevo cuenta como cambio si difiere al menos 0,50 y un 1 %; una caída
+de más del 85 % se descarta como lectura rota (otra variante, precio por unidad).
+Cada cambio guarda el precio anterior y un punto en `price_history`; el botón
+*Comprobar ahora* de la ficha hace una lectura completa a petición del usuario.
+
+Los **avisos push** son opcionales. Para activarlos:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+y en Render → *Environment*: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y
+`VAPID_SUBJECT=mailto:tu@correo`. Al redesplegar, en el perfil aparece *Activar
+avisos*. Cada móvil manda su suscripción junto con los tokens de dueño de sus
+listas, y el servidor solo apunta las que demuestra que son suyas; una
+suscripción que el móvil revoca se borra sola al primer envío fallido. En iPhone
+los avisos solo llegan con Haul instalada en la pantalla de inicio (iOS 16.4+).
+
+`/api/health` devuelve `watch` (piezas comprobadas, cambios, bajadas, último
+despertar) y `push` (si hay claves).
 
 ## Tiendas con protección anti-bot
 
@@ -159,6 +212,17 @@ Para releer solo algunos enlaces sin perder el resto del informe:
 `/api/bench/run?key=…&ids=E011,E033`.
 
 Para añadir enlaces, filas nuevas en el JSON (id, shop, url, title, price, currency).
+Dos campos opcionales: `verified` (fecha en que alguien comprobó el precio a mano;
+el informe dice cuántas filas lo tienen y desde cuándo) y `tolerance` (fracción,
+para tiendas cuyo precio baila solo: Etsy y Depop convierten divisa, AliExpress
+cambia según la sesión). Los precios caducan: un fallo de precio con nombre y foto
+correctos suele ser la hoja, no el lector. El estado y lo que falta, con causa,
+está en `test/banco-estado.md`.
+
+El número en producción depende del **saldo de Bright Data**: unas 30 tiendas del
+banco (Inditex, H&M, Adidas, New Balance, Decathlon, Etsy, Zara Home, Maisons du
+Monde, Leroy Merlin, Fnac, Shein) solo se leen con el desbloqueador. Con saldo,
+92–95 %; sin saldo, en torno al 67 %, haga lo que haga el lector.
 
 ## Adaptadores por tienda
 
@@ -184,9 +248,14 @@ del bloque de compra (nunca el tachado ni el precio por unidad) y foto en
   abrirla, también después de los redirects.
 - **Límite de peticiones** por IP en los endpoints caros (20/min) y de escritura (90/min).
 
+- **Las comprobaciones automáticas nunca cuestan dinero.** La vigilancia pasa
+  `cheap: true` al extractor y se queda sin precio antes que pagar una lectura.
+  Un enlace que solo se lee con el desbloqueador (Zara, Vans…) se comprueba de
+  verdad solo cuando el usuario toca *Comprobar ahora*.
+
 ## Lo siguiente
 
-- Alertas de bajada de precio (ya se guarda `price_value`, falta un cron y avisos push).
-- Detección de duplicados al añadir el mismo producto dos veces.
-- Reordenar productos arrastrando (el campo `position` ya existe).
-- Portada generada de cada lista para compartir en historias.
+- Aviso de "vuelve a estar disponible" (el extractor ya devuelve `availability`).
+- Buscar entre todas las listas.
+- Portada también en 1:1 y 4:5 para publicaciones, no solo historias.
+- Mover una pieza a otra lista.

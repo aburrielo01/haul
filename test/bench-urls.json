@@ -4,7 +4,7 @@
     "shop": "Zara",
     "url": "https://www.zara.com/es/es/pantalon-skinny-fit-vinilo-limited-edition-p08531122.html?v1=580814691&v2=2759928",
     "title": "LIMITED EDITION VINYL SKINNY FIT TROUSERS",
-    "price": 129.0,
+    "price": 129,
     "currency": "EUR",
     "note": ""
   },
@@ -24,7 +24,8 @@
     "title": "Pantalón baggy cargo",
     "price": 35.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E004",
@@ -33,7 +34,8 @@
     "title": "Jersey cuello pico hebilla",
     "price": 16.09,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado",
+    "verified": "2026-10-25"
   },
   {
     "id": "E005",
@@ -60,7 +62,8 @@
     "title": "Jersey punto suave fajín",
     "price": 25.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E008",
@@ -69,7 +72,8 @@
     "title": "Top corsetero",
     "price": 19.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E009",
@@ -94,9 +98,10 @@
     "shop": "Mango",
     "url": "https://shop.mango.com/es/es/p/hombre/chaquetas/chaquetas/chaqueta-efecto-ante-bolsillos/37094401/57/00",
     "title": "Chaqueta efecto ante bolsillos",
-    "price": 49.99,
+    "price": 59.99,
     "currency": "EUR",
-    "note": ""
+    "note": "precio actual 25 oct (era 49,99)",
+    "verified": "2026-10-25"
   },
   {
     "id": "E012",
@@ -105,7 +110,8 @@
     "title": "Cardigan punto canalé",
     "price": 49.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E013",
@@ -114,7 +120,8 @@
     "title": "Cárdigan cruzado",
     "price": 39.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E014",
@@ -123,7 +130,8 @@
     "title": "Cazadora de algodón con cuello",
     "price": 39.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E015",
@@ -139,27 +147,30 @@
     "shop": "Shein",
     "url": "https://es.shein.com/Zorclune-Men-s-Long-Sleeve-Crew-Neck-T-Shirt-Black-And-White-Color-Block-Raglan-Sleeve-Handwritten-English-Print-Loose-Fit-p-507712330.html?imgRatio=3-4&detailBusinessFrom=0-1_507712330%7C0-2&src_identifier=fc%3DMen%20Clothing%60sc%3DMen%20Clothing%60tc%3D0%60oc%3D0%60ps%3Dtab06navbar06%60jc%3DitemPicking_017172963&src_module=topcat&src_tab_page_id=page_goods_detail1791450711250&mallCode=1&pageListType=4",
     "title": "Zorclune Camiseta de manga larga cuello redondo para hombre, bloques de color negro y",
-    "price": 13.99,
+    "price": 14.99,
     "currency": "EUR",
-    "note": "\"desde\" 13,99 con varias opciones (antes 6,86)"
+    "note": "\"desde\" 14,99 con varias opciones (25 oct; era 13,99)",
+    "verified": "2026-10-25"
   },
   {
     "id": "E017",
     "shop": "Primark",
     "url": "https://www.primark.com/es-es/p/primark-form-camiseta-con-cremallera-de-1-4-azul-marino-991178891528",
     "title": "Primark Form | Camiseta con cremallera de 1/4",
-    "price": 12.0,
+    "price": 12,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E018",
     "shop": "Primark",
     "url": "https://www.primark.com/es-es/p/jersey-de-punto-jaspeado-con-cuello-redondo-beige-991186981118",
     "title": "Jersey de punto jaspeado con cuello redondo",
-    "price": 18.0,
+    "price": 18,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E019",
@@ -168,7 +179,8 @@
     "title": "Chaqueta plumas cortavientos reversible",
     "price": 129.9,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E020",
@@ -177,7 +189,8 @@
     "title": "Jersey 100% cashmere cuello alto",
     "price": 109.9,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E021",
@@ -186,7 +199,8 @@
     "title": "Nike Pegasus Plus 2",
     "price": 169.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E022",
@@ -195,151 +209,168 @@
     "title": "LeBron James Los Angeles Lakers 2023/24 Icon Edition",
     "price": 84.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E023",
     "shop": "Adidas",
     "url": "https://www.adidas.es/camiseta-segunda-equipacion-spain-26-winners/KF4413.html",
     "title": "Camiseta segunda equipación Spain 26 Winners",
-    "price": 100.0,
+    "price": 100,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E024",
     "shop": "Adidas",
     "url": "https://www.adidas.es/zapatilla-handball-spezial/KI2193.html",
     "title": "ZAPATILLA HANDBALL SPEZIAL",
-    "price": 110.0,
+    "price": 110,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E025",
     "shop": "New Balance",
     "url": "https://www.newbalance.es/es/pd/1080v15/M1080V15_RU-FTW-851438-AUG0.html?dwvar_M1080V15__RU-FTW-851438-AUG0_style=M108098N",
     "title": "1080v15 zapatillas",
-    "price": 180.0,
+    "price": 180,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E026",
     "shop": "New Balance",
     "url": "https://www.newbalance.es/es/pd/nb-numeric-340/UN340V1_SK-FTW-844118.html?dwvar_UN340V1__SK-FTW-844118_style=UN340VNB",
     "title": "NB Numeric 340 zapatillas",
-    "price": 100.0,
+    "price": 100,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E027",
     "shop": "Vans",
     "url": "https://www.vans.com/es-es/p/pantalones-vaqueros-holgados-check-5-VN000PH6CDX?size=38&length=32",
     "title": "Pantalones vaqueros holgados Check-5",
-    "price": 60.0,
+    "price": 75,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "la rebaja a 60 terminó (25 oct)",
+    "verified": "2026-10-25"
   },
   {
     "id": "E028",
     "shop": "Vans",
     "url": "https://www.vans.com/es-es/p/zapatillas-de-ninos-old-skool-v-kpop-demon-hunters-x-vans-4-8-anos-VN000V21YLW",
     "title": "Zapatillas de niños Old Skool V KPop Demon Hunters x Vans (4-8 años)",
-    "price": 60.0,
+    "price": 60,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E029",
     "shop": "Converse",
     "url": "https://www.converse.com/es/shop/p/converse-x-hello-kitty-and-friends-chuck-70-my-melody-kuromi-unisex/A21834C.html?dwvar_A21834C_color=black%2Fegret%2Fbrown&styleNo=A21834C&cgid=",
     "title": "Converse x Hello Kitty® and Friends Chuck 70 My Melody™ & Kuromi™",
-    "price": 100.0,
+    "price": 100,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E030",
     "shop": "Converse",
     "url": "https://www.converse.com/es/shop/p/chuck-taylor-all-star-canvas-unisex/A18096C.html?dwvar_A18096C_color=steely%20pine&styleNo=A18096C&cgid=Men%20High%20Top",
     "title": "Chuck Taylor All Star Canvas",
-    "price": 75.0,
+    "price": 75,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E031",
     "shop": "Levi's",
     "url": "https://www.levi.com/ES/es_ES/ropa/hombre/vaqueros/jean-de-corte-conico-cenido-512TM/p/288330588",
     "title": "Jean de corte cónico ceñido 512™",
-    "price": 49.5,
+    "price": 99,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "la rebaja a 49,50 terminó (25 oct)",
+    "verified": "2026-10-25"
   },
   {
     "id": "E032",
     "shop": "Levi's",
     "url": "https://www.levi.com/ES/es_ES/ropa/hombre/chaquetas-abrigos/chaqueta-hilltop/p/007SO0001",
     "title": "Chaqueta Hilltop",
-    "price": 130.0,
+    "price": 130,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E033",
     "shop": "Scuffers",
     "url": "https://scuffers.com/es/collections/new-arrivals-women/products/tap-pink-knit",
     "title": "Tap Pink Knit",
-    "price": 59.0,
+    "price": 59,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E034",
     "shop": "Scuffers",
     "url": "https://scuffers.com/es/collections/hoodies/products/raw-light-blue-hoodie",
     "title": "Raw Light Blue Hoodie",
-    "price": 79.0,
+    "price": 79,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E035",
     "shop": "Pompeii",
     "url": "https://pompeiibrand.com/products/football-jersey",
     "title": "RACING FOOTBALL",
-    "price": 99.0,
+    "price": 99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E036",
     "shop": "Pompeii",
     "url": "https://pompeiibrand.com/products/vega-leather-multi-roast",
     "title": "VEGA LEATHER MU",
-    "price": 179.0,
+    "price": 179,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E037",
     "shop": "JD Sports",
     "url": "https://www.jdsports.es/product/negro-mckenzie-pantalones-de-chndal-script/19723602_jdsportses/",
     "title": "McKenzie Pantalones de chándal Script",
-    "price": 12.0,
+    "price": 12,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado",
+    "verified": "2026-10-25"
   },
   {
     "id": "E038",
     "shop": "JD Sports",
     "url": "https://www.jdsports.es/product/blanco-nike-air-force-1-07-lv8/19755044_jdsportses/",
     "title": "Nike Air Force 1 '07 LV8",
-    "price": 130.0,
+    "price": 130,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E039",
@@ -348,7 +379,8 @@
     "title": "adidas BadBo 1.1",
     "price": 119.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E040",
@@ -357,25 +389,28 @@
     "title": "Nike One Classic Dri-fit Tank Top",
     "price": 29.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E041",
     "shop": "Snipes",
     "url": "https://www.snipes.com/es-es/p/adidas-originals-washed-fz-os-hd-trace-brown-washed-full-zip-oversized-hoodie-marron-102661",
     "title": "Washed Full Zip Oversized Hoodie",
-    "price": 59.99,
+    "price": 52.49,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado (antes 74,99; 25 oct, era 59,99)",
+    "verified": "2026-10-25"
   },
   {
     "id": "E042",
     "shop": "Snipes",
     "url": "https://www.snipes.com/es-es/p/adidas-originals-handball-spezial-olive-stratacream-whitegum5-handball-spezial-verde-48200",
     "title": "Handball Spezial",
-    "price": 98.99,
+    "price": 87.99,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado (antes 109,99; 25 oct, era 98,99)",
+    "verified": "2026-10-25"
   },
   {
     "id": "E043",
@@ -384,7 +419,8 @@
     "title": "1ª Camiseta España Mundial 2026",
     "price": 59.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E044",
@@ -393,16 +429,18 @@
     "title": "Nike Volley",
     "price": 19.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E045",
     "shop": "Decathlon",
     "url": "https://www.decathlon.es/es/p/mp/bicicleta-electrica-con-pedal-asistido-para-adultos-d3s-14-36v-10ah/d576a791-b033-4af5-b06b-f44afe7b9c9c/c1",
     "title": "Bicicleta eléctrica con pedal asistido para adultos D3S, 14\", 36V 10Ah",
-    "price": 478.0,
+    "price": 549,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado (antes 599; 25 oct, era 478)",
+    "verified": "2026-10-25"
   },
   {
     "id": "E046",
@@ -411,7 +449,8 @@
     "title": "Gafas de sol deportivas Adulto Decathlon Perf 500 categoría 3",
     "price": 29.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E047",
@@ -420,34 +459,38 @@
     "title": "Reality transurfing, II: El susurro de las estrellas de madrugada (PSICOLOGÍA)",
     "price": 13.25,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado",
+    "verified": "2026-10-25"
   },
   {
     "id": "E048",
     "shop": "Amazon",
     "url": "https://www.amazon.es/Apple-MacBook-Air-Pulgadas-Chip/dp/B0GR1QGFN5?__mk_es_ES=%C3%85M%C3%85%C5%BD%C3%95%C3%91&crid=2KC3B3ZM9X6FN&dib=eyJ2IjoiMSJ9.pxjhTMx0-Em7tBaYbhTGjav7XYpiWVfVHrTzwlnmdqOuO10lDeqPXeFYrKSIyDygM1gd8jEeWDEzT2zTwUi8F9hx5VTZCCS39F1sa7gTYJV9KUrZRkjCtgKZpSlrwCuqD1a5aOrETUJMIwaKnkRV9YrIbq-gHLQutPZWUPct0XXUwUb77XCOABXjZQIvhsg3q80BKKwiuaUbgBVTvVf7Ff3kuCcuc_DeFXHwfm1RgF5SqR-rlto-mhCdnlKPIXgGqRRq5o4ZTQXIVWfJ2OslJDCoc-acGPRkydTha6sgOHI.phQPo9fPWmlcgD--oAL38EnpvTjm4epD2tnnpY0d5Vc&dib_tag=se&keywords=macbook&qid=1791452019&sprefix=macnook%2Caps%2C164&sr=8-3&th=1",
     "title": "Apple MacBook Air de 15,3 Pulgadas con Chip M5: Pantalla Liquid Retina, CPU de 10 núcleos, GPU de 10 núcleos, 24 GB de Memoria unificada, 1 TB de SSD, Wi-Fi 7,Teclado español; Azul Cielo",
-    "price": 1599.0,
+    "price": 1629,
     "currency": "EUR",
-    "note": ""
+    "note": "25 oct (era 1599); Amazon lo mueve a menudo",
+    "verified": "2026-10-25"
   },
   {
     "id": "E049",
     "shop": "El Corte Inglés",
     "url": "https://www.elcorteingles.es/moda-mujer/A200809844-marron-oscuro-pr-botas-chelsea-2976-leonore-ii-de-mujer-en-piel-blanda-con-forro-sintetico/",
     "title": "Botas Chelsea 2976 Leonore II de mujer en piel blanda con forro sintético - Dr. Martens - Marrón oscuro",
-    "price": 210.0,
+    "price": 147,
     "currency": "EUR",
-    "note": ""
+    "note": "precio rebajado 30 % (antes 210; 25 oct)",
+    "verified": "2026-10-25"
   },
   {
     "id": "E050",
     "shop": "El Corte Inglés",
     "url": "https://www.elcorteingles.es/designers/A203092848-collar-kim-con-cuentas-de-resina-y-cadena-dorada/",
     "title": "Collar Kim con cuentas de resina y cadena dorada - Oro",
-    "price": 590.0,
+    "price": 590,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E051",
@@ -456,7 +499,8 @@
     "title": "BARREL PNT D - Vaqueros boyfriend - worn blue denim",
     "price": 84.95,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E052",
@@ -465,7 +509,8 @@
     "title": "Equipación de clubes - faster yellow-puma black",
     "price": 99.95,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E053",
@@ -474,7 +519,8 @@
     "title": "Vaqueros cortos mom de talle alto con lavado medio de Levi's",
     "price": 24.99,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado",
+    "verified": "2026-10-25"
   },
   {
     "id": "E054",
@@ -483,7 +529,8 @@
     "title": "Vestido largo rojo de tirantes con cuello desbocado de satén de VILA",
     "price": 46.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E055",
@@ -492,16 +539,18 @@
     "title": "Blazer KAVAZI en Marrón",
     "price": 89.9,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E056",
     "shop": "About You",
     "url": "https://www.aboutyou.es/p/alpha-industries/chaqueta-de-entretiempo-ma-1-vf-59-652196",
     "title": "Chaqueta de entretiempo 'MA-1 VF 59' ALPHA INDUSTRIES en Verde Oscuro",
-    "price": 170.0,
+    "price": 149,
     "currency": "EUR",
-    "note": "precio actual (antes 153 rebajado)"
+    "note": "precio actual 25 oct (antes 170); cambia cada pocos días",
+    "verified": "2026-10-25"
   },
   {
     "id": "E057",
@@ -510,16 +559,18 @@
     "title": "L’Oréal Paris | Pack Spray fijador Infaillible 36h de duración Water-proof y Oil-proof 2 unidades",
     "price": 14.15,
     "currency": "EUR",
-    "note": "pack de 2, precio actual (antes 10,05)"
+    "note": "pack de 2, precio actual (antes 10,05)",
+    "verified": "2026-10-25"
   },
   {
     "id": "E058",
     "shop": "Miravia",
     "url": "https://www.miravia.es/p/i1367779623483755-s2085415732812139.html?spm=euspain.ranking_collection_hp.hotlistPC_1.dslot_2.42265698GV4awy&clickTrackInfo=item_pool_ids%3A3601%3Bitem_discount_price%3A2659%3B_b_poolId%3A%3Bitem_id%3A1367779623483755%3Bitem_price%3A4310%3Bmt%3AtopSelling%3Bsku_id%3A2085415732812139%3Bself_app_id%3A43535%3B_b_weight%3A0.0%3Bexpo_fa%3A1367779623483755-0-topSelling%3Bpersonalization%3Afalse%3Bpvid%3A84e02dc0-1698-4700-93c1-d040d4ae689b%3Bexpo_time%3A1791452359730%3Bself_ab_id%3A393440%3B_b_id%3A",
     "title": "CAFÉ SIN INTERMEDIARIOS - Café de Brasil y Vietnam - Abrazos - Ideal para combinar con leche - Intensidad de sabor Alta - Recién tostado y envasado - 1 Kg Grano o Molido (Exprés, Filtro, Italiana, Americana, Superautomática)",
-    "price": 26.59,
+    "price": 34.5,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "SKU de la URL; 25 oct (era 26,59 con promoción)",
+    "verified": "2026-10-25"
   },
   {
     "id": "E059",
@@ -528,16 +579,18 @@
     "title": "59ml Maya Verra Gotas Líquidas de Soporte Linfático para el Bienestar Corporal, Extracto Herbal Natural, Suplemento Dietético, Cuidado Corporal",
     "price": 11.69,
     "currency": "EUR",
-    "note": ""
+    "note": "a veces sirve la página sin producto a visitas automáticas"
   },
   {
     "id": "E060",
     "shop": "AliExpress",
     "url": "https://es.aliexpress.com/item/1005009137866477.html?spm=a2g0o.productlist.main.4.11aa3e8bFb278k&aem_p4p_detail=2026100802404913607681622198100000053562&algo_pvid=ee3f720d-823e-4605-a59c-1a88fbcc81f9&algo_exp_id=ee3f720d-823e-4605-a59c-1a88fbcc81f9-3&pdp_ext_f=%7B%22order%22%3A%227776%22%2C%22spu_best_type%22%3A%22price%22%2C%22eval%22%3A%221%22%2C%22fromPage%22%3A%22search%22%7D&pdp_npi=6%40dis%21EUR%2144.98%2121.59%21%21%21330.01%21158.40%21%400b884b5817914524496073233e0f89%2112000058602295136%21sea%21ES%210%21ABX%211%210%21n_tag%3A-29910%3Bd%3A64863654%3Bm03_new_user%3A-29895&curPageLogUid=2z9AOEcUapuu&utparam-url=scene%3Asearch%7Cquery_from%3A%7Cx_object_id%3A1005009137866477%7C_p_origin_prod%3A&search_p4p_id=2026100802404913607681622198100000053562_1",
     "title": "Aspiradora de coche con soplador turbo, ventilador de chorro potente, herramientas de limpieza y soplado, colector de polvo automático, soplador de aire portátil, secador de pelo",
-    "price": 21.59,
+    "price": 21.19,
     "currency": "EUR",
-    "note": ""
+    "note": "AliExpress enseña precios distintos según la sesión (oferta de bienvenida -12 %: 18,53); por eso tolera un 15 %; 25 oct, era 21,59",
+    "verified": "2026-10-25",
+    "tolerance": 0.15
   },
   {
     "id": "E061",
@@ -562,18 +615,22 @@
     "shop": "Etsy",
     "url": "https://www.etsy.com/es/listing/4527975774/oleo-sobre-tabla-sueco-original-horno-en?ls=r&ref=rlp-listing-grid-4&external=1&sr_prefetch=1&pf_from=rlp&pro=1&frs=1&sts=1&content_source=2b0258d4b1b2f9e35f55fcabbf12ea70%253ALT403928e83b3f3cc1d9924d066a3543a5db6055cd&logging_key=2b0258d4b1b2f9e35f55fcabbf12ea70%3ALT403928e83b3f3cc1d9924d066a3543a5db6055cd",
     "title": "Óleo sobre tabla sueco original – “Horno en el estudio” de Hanne Jönsson – Fechado en 1943 – De época y enmarcado – 39 × 44 cm (15,4\" × 17,3\") imagen 2",
-    "price": 487.16,
+    "price": 493.02,
     "currency": "EUR",
-    "note": ""
+    "note": "precio convertido de divisa: baila con el cambio (25 oct, era 487,16)",
+    "tolerance": 0.03,
+    "verified": "2026-10-25"
   },
   {
     "id": "E064",
     "shop": "Etsy",
     "url": "https://www.etsy.com/es/listing/1268291239/cadenas-de-collar-esenciales-de-caitlyn?ls=s&ga_order=most_relevant&ga_search_type=all&ga_view_type=gallery&ga_search_query=collar&ref=sr_gallery-1-3&sr_prefetch=1&pf_from=search&pro=1&bes=1&sts=1&content_source=817694ff-a956-4d78-8e1e-f9c055ea4dfd%253ALTed7cf67da36db624b90b12760ff29e601feb552a&organic_search_click=1&logging_key=817694ff-a956-4d78-8e1e-f9c055ea4dfd%3ALTed7cf67da36db624b90b12760ff29e601feb552a",
     "title": "Cadenas esenciales para collares de Caitlyn Minimalist • Collares de espiga, cuerda, cadena de serpiente y más • Collares de plata y oro de moda para combinar",
-    "price": 29.7,
+    "price": 27.66,
     "currency": "EUR",
-    "note": ""
+    "note": "\"desde\" 27,66, la variante más barata (25 oct; era 29,70); divisa convertida",
+    "tolerance": 0.03,
+    "verified": "2026-10-25"
   },
   {
     "id": "E065",
@@ -582,7 +639,8 @@
     "title": "Sudadera gris Bershka XS",
     "price": 8.5,
     "currency": "EUR",
-    "note": "precio del artículo; con protección al comprador 9,63"
+    "note": "precio del artículo; con protección al comprador 9,63",
+    "verified": "2026-10-25"
   },
   {
     "id": "E066",
@@ -591,34 +649,39 @@
     "title": "Xbox 360 Elite 250 GB + Controller Originale + Aurora",
     "price": 89,
     "currency": "EUR",
-    "note": "precio del artículo; con protección al comprador 94,15"
+    "note": "precio del artículo; con protección al comprador 94,15",
+    "verified": "2026-10-25"
   },
   {
     "id": "E067",
     "shop": "Wallapop",
     "url": "https://es.wallapop.com/item/ebook-reader-kiwie-blanco-1310718894",
     "title": "Ebook Reader Kiwie Blanco",
-    "price": 45.0,
+    "price": 30,
     "currency": "EUR",
-    "note": ""
+    "note": "el vendedor lo bajó de 45 a 30 (25 oct)",
+    "verified": "2026-10-25"
   },
   {
     "id": "E068",
     "shop": "Wallapop",
     "url": "https://es.wallapop.com/item/casco-arai-tour-x5-honda-africa-twin-talla-m-nuevo-1310724298",
     "title": "Casco Arai Tour-X5 Honda Africa Twin talla M nuevo",
-    "price": 499.0,
+    "price": 499,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E069",
     "shop": "Depop",
     "url": "https://www.depop.com/products/bensthr2ftedthreads-vintage-carhartt-co3-usa-made-4041/?moduleOrigin=shop_by_style&campaignTitle=detroit_jackets",
     "title": "Carhartt Men's Tan and Brown Jacket",
-    "price": 108.89,
+    "price": 84.69,
     "currency": "USD",
-    "note": "precio rebajado"
+    "note": "precio rebajado (antes 181,49); agotado desde octubre; el nombre es el que Depop genera (alt de la foto); 25 oct, era 108,89",
+    "tolerance": 0.03,
+    "verified": "2026-10-25"
   },
   {
     "id": "E070",
@@ -627,16 +690,19 @@
     "title": "Harley Davidson Men's Navy and Black T-shirt",
     "price": 12.1,
     "currency": "USD",
-    "note": ""
+    "note": "",
+    "tolerance": 0.03,
+    "verified": "2026-10-25"
   },
   {
     "id": "E071",
     "shop": "Sephora",
     "url": "https://www.sephora.es/p/balance-mode-pore-polishing-peel-off-mask---mascarilla-matificante-piel-grasa-P1000214943.html",
     "title": "Balance Mode Pore Polishing Peel-off Mask - Mascarilla matificante piel grasa",
-    "price": 24.0,
+    "price": 24,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E072",
@@ -645,7 +711,8 @@
     "title": "FLUFF & FIX BROW WAX - Cera de cejas texturizante y fijadora",
     "price": 13.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E073",
@@ -654,7 +721,8 @@
     "title": "Advntr Story nº1 Eau de Toilette",
     "price": 19.95,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado",
+    "verified": "2026-10-25"
   },
   {
     "id": "E074",
@@ -663,7 +731,8 @@
     "title": "ELVIVE Aceite Extraordinario Tratamiento de uso universal",
     "price": 7.98,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado",
+    "verified": "2026-10-25"
   },
   {
     "id": "E075",
@@ -672,7 +741,8 @@
     "title": "One Million Black",
     "price": 38.15,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado",
+    "verified": "2026-10-25"
   },
   {
     "id": "E076",
@@ -681,16 +751,18 @@
     "title": "Terracotta Golden Dunes",
     "price": 36.95,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado",
+    "verified": "2026-10-25"
   },
   {
     "id": "E077",
     "shop": "Douglas",
     "url": "https://www.douglas.es/es/p/5011687008",
     "title": "Dior Homme Parfum",
-    "price": 97.0,
+    "price": 97,
     "currency": "EUR",
-    "note": "opcion 50 ml"
+    "note": "opcion 50 ml",
+    "verified": "2026-10-25"
   },
   {
     "id": "E078",
@@ -699,7 +771,8 @@
     "title": "Make-Up Dual-Tip Eyebrow Pencil",
     "price": 8.99,
     "currency": "EUR",
-    "note": "opcion Dark brown"
+    "note": "opcion Dark brown",
+    "verified": "2026-10-25"
   },
   {
     "id": "E079",
@@ -708,7 +781,8 @@
     "title": "Acqua Verve",
     "price": 79.9,
     "currency": "EUR",
-    "note": "opcion 60 ml"
+    "note": "opcion 60 ml",
+    "verified": "2026-10-25"
   },
   {
     "id": "E080",
@@ -717,25 +791,28 @@
     "title": "Dog Shampoo",
     "price": 17.9,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E081",
     "shop": "Apple",
     "url": "https://www.apple.com/es/shop/buy-iphone/iphone-18-pro",
     "title": "Comprar un iPhone 18 Pro",
-    "price": 1469.0,
+    "price": 1469,
     "currency": "EUR",
-    "note": "opcion iPhone 18 Pro"
+    "note": "opcion iPhone 18 Pro",
+    "verified": "2026-10-25"
   },
   {
     "id": "E082",
     "shop": "Apple",
     "url": "https://www.apple.com/es/shop/buy-mac/macbook-neo/%C3%ADndigo-512gb",
     "title": "Comprar un MacBook Neo",
-    "price": 899.0,
+    "price": 899,
     "currency": "EUR",
-    "note": "opcion color Indigo/ 512GB"
+    "note": "opcion color Indigo/ 512GB",
+    "verified": "2026-10-25"
   },
   {
     "id": "E083",
@@ -744,34 +821,38 @@
     "title": "Xiaomi 17T Pro 5G 12GB 512GB 6.83\" Negro",
     "price": 686.95,
     "currency": "EUR",
-    "note": "opcion color negro/ 512GB"
+    "note": "opcion color negro/ 512GB",
+    "verified": "2026-10-25"
   },
   {
     "id": "E084",
     "shop": "PcComponentes",
     "url": "https://www.pccomponentes.com/forgeon-vendetta-raton-gaming-rgb-16000dpi-negro",
     "title": "Forgeon Vendetta Ratón Gaming RGB 16000DPI Negro",
-    "price": 34.99,
+    "price": 52.99,
     "currency": "EUR",
-    "note": "opcion Vendetta"
+    "note": "opcion Vendetta; 25 oct (era 34,99); PVPR 65,99",
+    "verified": "2026-10-25"
   },
   {
     "id": "E085",
     "shop": "MediaMarkt",
     "url": "https://www.mediamarkt.es/es/product/_tv-led-43-samsung-tu43u8075hu-uhd-4k-crystal-processor-4k-smart-tv-wifi-negro-1627508.html",
     "title": "TV LED 43\" - Samsung TU43U8075HU, UHD 4K, Crystal Processor 4K, Smart TV, Wifi, Negro",
-    "price": 299.0,
+    "price": 299,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado",
+    "verified": "2026-10-25"
   },
   {
     "id": "E086",
     "shop": "MediaMarkt",
     "url": "https://www.mediamarkt.es/es/product/_portatil-gaming-asus-tuf-gaming-a18-fa808um-s8005-18-wuxga-amd-ryzentm-7-260-32-gb-1-tb-ssd-geforce-rtxtm-5060-sin-sistema-operativo-1598625.html",
     "title": "Portátil gaming - ASUS TUF Gaming A18 FA808UM-S8005, 18\" WUXGA, AMD Ryzen™ 7 260, 32 GB, 1 TB SSD, GeForce RTX™ 5060, Sin sistema operativo",
-    "price": 1379.0,
+    "price": 1379,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado",
+    "verified": "2026-10-25"
   },
   {
     "id": "E087",
@@ -780,16 +861,18 @@
     "title": "El día de la Trilla (Empíreo) Edición limitada con cantos tintados",
     "price": 21.76,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado",
+    "verified": "2026-10-25"
   },
   {
     "id": "E088",
     "shop": "Fnac",
     "url": "https://www.fnac.es/Consola-PlayStation-5-Pro-2-TB-Videoconsola-Consola/a12439688",
     "title": "Consola PlayStation®5 Pro - 2 TB",
-    "price": 1938.83,
+    "price": 2417.12,
     "currency": "EUR",
-    "note": ""
+    "note": "25 oct (era 1938,83)",
+    "verified": "2026-10-25"
   },
   {
     "id": "E089",
@@ -798,7 +881,8 @@
     "title": "EA Sports FC 27 PS5",
     "price": 79.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E090",
@@ -807,25 +891,28 @@
     "title": "Hellraiser Revival Day One Edition PS5",
     "price": 39.99,
     "currency": "EUR",
-    "note": "Agotado web"
+    "note": "Agotado web",
+    "verified": "2026-10-25"
   },
   {
     "id": "E091",
     "shop": "Samsung",
     "url": "https://www.samsung.com/es/tablets/galaxy-tab-s/galaxy-tab-s12-ultra-gray-256gb-sm-x940nzareub/",
     "title": "Galaxy Tab S12 Ultra",
-    "price": 1539.0,
+    "price": 1539,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E092",
     "shop": "Samsung",
     "url": "https://www.samsung.com/es/smartphones/galaxy-z-flip8/buy/",
     "title": "Galaxy Z Flip8",
-    "price": 1199.0,
+    "price": 1129,
     "currency": "EUR",
-    "note": "opcion 256 GB | 12 GB"
+    "note": "opcion 256 GB | 12 GB; 25 oct (era 1199)",
+    "verified": "2026-10-25"
   },
   {
     "id": "E093",
@@ -834,16 +921,18 @@
     "title": "KALLAXEstantería, marrón efecto nogal, 112x147 cm",
     "price": 79.99,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado",
+    "verified": "2026-10-25"
   },
   {
     "id": "E094",
     "shop": "Ikea",
     "url": "https://www.ikea.com/es/es/p/grotan-mesa-pino-tinte-marron-40610424/",
     "title": "GRÖTÅNMesa, pino/tinte marrón, 105 cm",
-    "price": 149.0,
+    "price": 149,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E095",
@@ -852,7 +941,8 @@
     "title": "FUNDA NÓRDICA RAYAS PERCAL (300 HILOS)",
     "price": 49.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E096",
@@ -861,7 +951,8 @@
     "title": "SET COFRE REGALO GINGERBREAD (SET DE 3)",
     "price": 29.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E097",
@@ -870,16 +961,18 @@
     "title": "Busset - Lámpara de mesa de cerámica y poliéster reciclado Alt. 31 cm",
     "price": 19.99,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E098",
     "shop": "Maisons du Monde",
     "url": "https://www.maisonsdumonde.com/ES/es/p/mesa-de-comedor-de-mango-macizo-8-a-12-personas-240-cm-alya-254024.htm",
     "title": "Alya - Mesa de comedor de mango macizo, 8 a 12 personas, 240 cm",
-    "price": 1199.0,
+    "price": 1199,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E099",
@@ -888,7 +981,8 @@
     "title": "Armario 3 puertas abatibles Riga blanco SPACEO Evo'M blanco 140 x 230,4 x 54 cm (AnchoxAltoxFondo)",
     "price": 423.92,
     "currency": "EUR",
-    "note": ""
+    "note": "",
+    "verified": "2026-10-25"
   },
   {
     "id": "E100",
@@ -897,6 +991,7 @@
     "title": "Mueble de TV con 2 puertas correderas y 2 cajones - 175 x 38 x 45 cm - MDF - para salón - Nogal",
     "price": 182.99,
     "currency": "EUR",
-    "note": "precio rebajado"
+    "note": "precio rebajado",
+    "verified": "2026-10-25"
   }
 ]

@@ -8,6 +8,13 @@ const STORE_KEY = 'haul.v2';
 const EMOJIS = ['✶', '👟', '👗', '💄', '🎧', '🛋️', '🎮', '📚', '🍿', '🎁', '✣', '▣'];
 const AVATARS = ['😎', '🦋', '👽', '🐰', '🔥', '🫧', '🍒', '⭐️', '🎀', '🧊'];
 const THEMES = ['sky', 'lime', 'lavender', 'coral', 'sun', 'ink'];
+// órdenes de la lista; el manual es el que se arrastra
+const SORTS = [
+  ['manual', 'tu orden'],
+  ['price-desc', 'precio ↓'],
+  ['price-asc', 'precio ↑'],
+  ['recent', 'recientes'],
+];
 
 const CDN = {
   zxing: 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js',
@@ -42,6 +49,43 @@ function imgSrc(url) {
   return '/api/img?u=' + encodeURIComponent(url);
 }
 
+/* ------------------------------------------------------ precios (v4) */
+
+/** Bajada vigente de una pieza: su último cambio de precio fue hacia abajo. */
+function dropOf(p) {
+  if (!p || p.bought || p.prevPrice === null || p.prevPrice === undefined) return null;
+  const now = Number(p.priceValue);
+  const before = Number(p.prevPrice);
+  if (!Number.isFinite(now) || !Number.isFinite(before) || before <= 0 || before <= now) return null;
+  return { from: before, to: now, pct: Math.max(1, Math.round(((before - now) / before) * 100)) };
+}
+
+/** Subida vigente: se enseña discreta, sin sticker. */
+function riseOf(p) {
+  if (!p || p.bought || p.prevPrice === null || p.prevPrice === undefined) return null;
+  const now = Number(p.priceValue);
+  const before = Number(p.prevPrice);
+  if (!Number.isFinite(now) || !Number.isFinite(before) || before <= 0 || before >= now) return null;
+  return { from: before, to: now, pct: Math.max(1, Math.round(((now - before) / before) * 100)) };
+}
+
+function countDrops(items) {
+  return (items || []).filter((i) => dropOf(i)).length;
+}
+
+function timeAgo(ts) {
+  const d = Date.now() - Number(ts);
+  if (!Number.isFinite(d) || d < 90 * 1000) return 'ahora mismo';
+  const m = Math.round(d / 60000);
+  if (m < 60) return `hace ${m} min`;
+  const h = Math.round(m / 60);
+  if (h < 48) return `hace ${h} h`;
+  const days = Math.round(h / 24);
+  if (days < 30) return `hace ${days} días`;
+  const months = Math.round(days / 30);
+  return `hace ${months} mes${months === 1 ? '' : 'es'}`;
+}
+
 const scriptCache = new Map();
 function loadScript(src) {
   if (scriptCache.has(src)) return scriptCache.get(src);
@@ -60,7 +104,7 @@ function loadScript(src) {
 /* ------------------------------------------------------------ almacén */
 
 const store = {
-  data: { profile: { name: '', avatar: '😎' }, lists: [], saved: [], seenWelcome: false },
+  data: { profile: { name: '', avatar: '😎' }, lists: [], saved: [], seenWelcome: false, hints: {}, push: { endpoint: '' } },
   load() {
     try {
       const raw = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
@@ -78,6 +122,7 @@ const store = {
       visibility: list.visibility, count: list.items?.length || 0, ownerToken,
       covers: (list.items || []).slice(0, 4).map((i) => i.image).filter(Boolean),
       total: sumTotal(list.items || []).value,
+      drops: countDrops(list.items || []),
     });
     this.save();
   },
@@ -88,6 +133,7 @@ const store = {
       name: list.name, emoji: list.emoji, theme: list.theme, visibility: list.visibility,
       count: list.items.length, covers: list.items.slice(0, 4).map((i) => i.image).filter(Boolean),
       total: sumTotal(list.items).value,
+      drops: countDrops(list.items),
     });
     this.save();
   },
@@ -150,6 +196,10 @@ const session = {
   sharingItem: null,// producto concreto que se está compartiendo
   scanner: null,
   deferredInstall: null,
+  sort: 'manual',   // orden de la lista abierta (solo en el móvil)
+  forceDup: false,  // el usuario ha dicho "guardar igualmente" una pieza repetida
+  dupItem: null,
+  pushConfig: null, // { enabled, key } del servidor
 };
 
 /* ------------------------------------------------------------- pantallas */
@@ -218,6 +268,17 @@ function renderHome() {
   $('#homeEmpty').classList.toggle('hidden', lists.length > 0);
   $('#listStack').innerHTML = lists.map(listCard).join('');
 
+  // bajadas de precio pendientes de ver, sumadas en todas las listas
+  const drops = lists.reduce((n, l) => n + (l.drops || 0), 0);
+  const withDrops = lists.filter((l) => l.drops);
+  $('#homeDrops').innerHTML = drops ? `
+    <button class="dropsbanner" data-open-drops="${esc(withDrops[0].slug)}">
+      <b>↓ ${drops}</b>
+      <span class="grow">${drops === 1 ? 'Una pieza ha bajado de precio' : `${drops} piezas han bajado de precio`}
+        ${withDrops.length > 1 ? 'en varias listas' : `en ${esc(withDrops[0].name)}`}</span>
+      <span>→</span>
+    </button>` : '';
+
   const saved = store.data.saved || [];
   $('#savedSection').classList.toggle('hidden', !saved.length);
   $('#savedStack').innerHTML = saved.map(listCard).join('');
@@ -275,35 +336,96 @@ function renderList() {
       </div>`;
   } else banner.innerHTML = '';
 
-  const visible = list.items.filter((it) =>
-    session.filter === 'all' ? true : session.filter === 'bought' ? it.bought : !it.bought
-  );
-  $('#listEmpty').classList.toggle('hidden', visible.length > 0);
-  $('#productGrid').innerHTML = visible.map(productCard).join('')
-    + (visible.length && canAdd
+  // filtros: el de bajadas enseña cuántas hay; el orden se cambia con el último botón
+  const drops = countDrops(list.items);
+  const pillDrops = $('#pillDrops');
+  pillDrops.textContent = drops ? `↓ Bajadas · ${drops}` : '↓ Bajadas';
+  pillDrops.classList.toggle('is-empty', !drops);
+  const sortBtn = $('#btnSort');
+  sortBtn.textContent = '⇅ ' + (SORTS.find(([k]) => k === session.sort) || SORTS[0])[1];
+  sortBtn.classList.toggle('is-sorted', session.sort !== 'manual');
+
+  const visible = sortItems(list.items.filter((it) =>
+    session.filter === 'all' ? true
+      : session.filter === 'bought' ? it.bought
+        : session.filter === 'drops' ? !!dropOf(it)
+          : !it.bought
+  ));
+  const empty = $('#listEmpty');
+  empty.classList.toggle('hidden', visible.length > 0);
+  if (!visible.length) {
+    const copy = {
+      all: ['✚', 'Lista vacía', 'Añade lo primero: un enlace, un escaneo o una captura.', true],
+      pending: ['✓', 'Todo comprado', 'No queda nada por comprar en esta lista.', false],
+      bought: ['♡', 'Nada comprado aún', 'Cuando compres una pieza, márcala en su ficha y aparecerá aquí.', false],
+      drops: ['↓', 'Ninguna bajada todavía', 'Haul mira el precio de tus piezas cada pocas horas. Cuando alguno baje, aparecerá aquí con su sticker.', false],
+    }[session.filter] || ['✚', 'Lista vacía', 'Añade lo primero.', true];
+    $('.empty__emoji', empty).textContent = copy[0];
+    $('.title', empty).textContent = copy[1];
+    $('.lead', empty).textContent = copy[2];
+    $('[data-action="add-item"]', empty).classList.toggle('hidden', !(copy[3] && canAdd));
+  }
+  const grid = $('#productGrid');
+  grid.innerHTML = visible.map(productCard).join('')
+    + (visible.length && canAdd && session.filter !== 'drops'
       ? `<button class="addcard" data-action="add-item"><b>¿Otra pieza?</b><span>pega enlace o captura</span></button>`
       : '');
-  $$('#listFilters .pill').forEach((p) => p.classList.toggle('is-active', p.dataset.filter === session.filter));
+  grid.classList.toggle('can-sort', canReorder());
+  $$('#listFilters .pill[data-filter]').forEach((p) => p.classList.toggle('is-active', p.dataset.filter === session.filter));
+  maybeHintReorder();
+}
+
+function sortItems(items) {
+  const arr = [...items];
+  const price = (i) => (Number.isFinite(i.priceValue) ? i.priceValue : null);
+  switch (session.sort) {
+    case 'price-desc': return arr.sort((a, b) => (price(b) ?? -1) - (price(a) ?? -1));
+    case 'price-asc': return arr.sort((a, b) => (price(a) ?? Infinity) - (price(b) ?? Infinity));
+    case 'recent': return arr.sort((a, b) => b.createdAt - a.createdAt);
+    default: return arr;
+  }
+}
+
+function cycleSort() {
+  const i = SORTS.findIndex(([k]) => k === session.sort);
+  session.sort = SORTS[(i + 1) % SORTS.length][0];
+  buzz();
+  renderList();
+}
+
+/** La primera vez que hay algo que ordenar, se cuenta cómo. */
+function maybeHintReorder() {
+  if (!canReorder() || store.data.hints?.reorder) return;
+  store.data.hints = { ...(store.data.hints || {}), reorder: true };
+  store.save();
+  setTimeout(() => toast('Mantén pulsada una pieza para cambiarla de sitio'), 900);
 }
 
 function productCard(p) {
   const src = p.image ? imgSrc(p.image) : '';
   const sourceLabel = { scan: 'escaneado', shot: 'captura', manual: 'a mano' }[p.source];
+  const drop = dropOf(p);
+  const rise = riseOf(p);
+  const go = p.bought ? 'comprado'
+    : drop ? `<span class="down">antes ${esc(money(drop.from, p.currency))}</span>`
+      : rise ? `<span class="up">↑ ${rise.pct}%</span>`
+        : 'ver →';
   return `
     <article class="product${p.bought ? ' is-bought' : ''}" data-open-item="${esc(p.id)}">
       <div class="product__canvas">
         ${src
-          ? `<img class="product__img" src="${esc(src)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`
+          ? `<img class="product__img" src="${esc(src)}" alt="" loading="lazy" draggable="false" onerror="this.style.visibility='hidden'">`
           : `<div class="product__img product__img--empty">🏷️</div>`}
         <span class="product__shop">${esc(p.shop || (sourceLabel ? sourceLabel : 'sin tienda'))}</span>
         <span class="product__tick">${p.bought ? '✓' : '♡'}</span>
         <span class="product__price">${esc(p.priceText || '—')}</span>
+        ${drop ? `<span class="product__drop">↓ ${drop.pct}%</span>` : ''}
       </div>
       <div class="product__body">
         <div class="product__title">${esc(p.title)}</div>
         <div class="product__meta">
           <span>${p.note ? esc(p.note) : (sourceLabel || 'enlace')}</span>
-          <span class="product__go">${p.bought ? 'comprado' : 'ver →'}</span>
+          <span class="product__go">${go}</span>
         </div>
       </div>
     </article>`;
@@ -325,6 +447,7 @@ function renderProfile() {
     <div class="stat"><b>${items}</b><span>guardados</span></div>
     <div class="stat"><b>${(store.data.saved || []).length}</b><span>de otros</span></div>`;
   void bought;
+  renderPushRow();
 }
 
 /* --------------------------------------------------------- abrir lista */
@@ -340,11 +463,12 @@ function showGate({ emoji, title, text, action }) {
   goto('gate', { push: false });
 }
 
-async function openList(slug, { push = true, attempt = 0 } = {}) {
+async function openList(slug, { push = true, attempt = 0, filter = 'all' } = {}) {
   try {
     const { list } = await api(`/lists/${encodeURIComponent(slug)}`, { slug });
     session.list = list;
-    session.filter = 'all';
+    session.filter = filter;
+    session.sort = 'manual';
     if (list.role === 'owner') store.syncList(list);
     renderList();
     goto('list', { push });
@@ -356,7 +480,7 @@ async function openList(slug, { push = true, attempt = 0 } = {}) {
         emoji: '🔒',
         title: 'Esta lista es privada',
         text: 'Quien la creó tiene que abrir Compartir y activar el enlace. Avísale y vuelve a intentarlo.',
-        action: { label: 'Reintentar', run: () => openList(slug, { push: false }) },
+        action: { label: 'Reintentar', run: () => openList(slug, { push: false, filter }) },
       });
     }
     if (err.status === 404) {
@@ -373,13 +497,13 @@ async function openList(slug, { push = true, attempt = 0 } = {}) {
     if (attempt < 2) {
       showGate({ emoji: '😴', title: 'Despertando el servidor', text: 'La primera visita del día tarda un poco. Seguimos intentándolo…' });
       await sleep(3500 * (attempt + 1));
-      return openList(slug, { push, attempt: attempt + 1 });
+      return openList(slug, { push, attempt: attempt + 1, filter });
     }
     showGate({
       emoji: '📡',
       title: 'No hemos podido conectar',
       text: 'Comprueba tu conexión y vuelve a intentarlo.',
-      action: { label: 'Reintentar', run: () => openList(slug, { push: false }) },
+      action: { label: 'Reintentar', run: () => openList(slug, { push: false, filter }) },
     });
   }
 }
@@ -443,6 +567,7 @@ async function submitListForm() {
       renderList();
       goto('list');
       toast('Lista creada ✦');
+      syncPushLists(); // si hay avisos activados, la lista nueva entra en ellos
       // si se venía de "compartir" sin listas, lo compartido entra ahora
       const shared = session.pendingShare;
       session.pendingShare = null;
@@ -526,9 +651,11 @@ function resetAdd() {
   session.hint = null;
   session.sharedPhoto = null;
   session.editingItem = null;
+  session.forceDup = false;
+  session.dupItem = null;
   $('#addPreview').classList.add('hidden');
-  $('#altBox').classList.add('hidden');
   $('#addError').classList.add('hidden');
+  $('#addDup').classList.add('hidden');
   $('#addLoader').classList.add('hidden');
   $('#shotProgress').classList.add('hidden');
   $('#urlInput').value = '';
@@ -626,7 +753,16 @@ async function readUrl() {
   const url = shared.url || typed;
   if (!/^https?:\/\//i.test(url) || isSelfUrl(url)) {
     const guess = guessFromShareText(typed);
-    if (guess.title) return findByText(typed, guess);
+    if (guess.title) {
+      // Llegó el texto de la tienda pero sin el enlace (pasa al copiar desde
+      // algunas apps en iPhone): queda el nombre y se pide el enlace.
+      showAddError('El texto copiado no traía el enlace del producto', {
+        hint: 'Te dejo el nombre. Para que lea foto y precio, en la ficha de la tienda toca compartir y elige "Copiar enlace", o pégalo aquí desde el navegador.',
+      });
+      showPreview({ title: guess.title, shop: guess.shop, url: '', image: '', priceText: '', source: 'manual' });
+      if (session.sharedPhoto) attachPhoto(session.sharedPhoto);
+      return;
+    }
     showAddError('Pega el enlace del producto (o el texto que comparte la app de la tienda)');
     return;
   }
@@ -660,57 +796,6 @@ async function readUrl() {
   }
 }
 
-/**
- * Llegó el texto de la tienda pero sin el enlace (las apps, en iPhone, no se
- * lo dan a terceros): el servidor busca el producto por su nombre en la tienda
- * y, si lo encuentra, se lee la ficha como si hubiera venido el enlace.
- */
-async function findByText(text, guess) {
-  setLoading(true, `Buscando el producto en ${guess.shop || 'la tienda'}…`);
-  $('#addPreview').classList.add('hidden');
-  try {
-    const data = await api('/extract', { method: 'POST', body: { text } });
-    $('#urlInput').value = data.url || '';
-    showPreview({ ...data, source: 'url' });
-    if (!data.image && session.sharedPhoto) attachPhoto(session.sharedPhoto);
-    const alts = (data.found && data.found.alternatives) || [];
-    renderAlternatives(alts);
-    if (alts.length) toast('Hay varias fichas con ese nombre: mira que sea la buena');
-    else if (data.found && data.found.match < 100) toast('Encontrado por el nombre: comprueba que es el mismo');
-  } catch (err) {
-    showAddError(
-      err.code === 'NOT_FOUND' ? err.message : 'El texto no traía el enlace y no he podido buscarlo',
-      { hint: 'Te dejo el nombre. Para la foto y el precio, abre la ficha en el navegador y pega aquí su enlace.' }
-    );
-    showPreview({ title: guess.title, shop: guess.shop, url: '', image: '', priceText: '', source: 'manual' });
-    if (session.sharedPhoto) attachPhoto(session.sharedPhoto);
-  } finally {
-    setLoading(false);
-  }
-}
-
-/** Otras fichas con el mismo nombre: un toque y se lee esa en vez de la elegida. */
-function renderAlternatives(alts) {
-  const box = $('#altBox');
-  const list = $('#altList');
-  list.innerHTML = '';
-  box.classList.toggle('hidden', !alts.length);
-  for (const a of alts) {
-    const b = document.createElement('button');
-    b.className = 'alt';
-    b.type = 'button';
-    const price = a.price != null ? money(a.price, 'EUR') : '';
-    const tag = a.group === 'KIDS' ? 'niños' : a.group === 'WOMEN' ? 'mujer' : a.group === 'MEN' ? 'hombre' : '';
-    b.innerHTML = `<img alt="" loading="lazy" src="${esc(a.image ? imgSrc(a.image) : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="3" height="4"><rect width="3" height="4" fill="#f1ecfb"/></svg>'))}">` +
-      `<div class="alt__meta"><b>${esc(price || 'ver precio')}</b>${esc((a.name || '').split(' - ').pop() || '')}${tag ? `<span class="alt__tag">${tag}</span>` : ''}</div>`;
-    b.addEventListener('click', () => {
-      $('#urlInput').value = a.url;
-      readUrl(); // la lista se queda a la vista por si quiere volver a cambiar
-    });
-    list.appendChild(b);
-  }
-}
-
 function hostOf(url) {
   try {
     const h = new URL(url).hostname.replace(/^www\./, '').split('.')[0];
@@ -731,6 +816,52 @@ function showPreview(data) {
   $('#addPreview').classList.remove('hidden');
   $('#addPreview').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   buzz(18);
+  checkDuplicate(data);
+}
+
+/* ---------------------------------------------------------- duplicados */
+
+/** El mismo enlace, o la misma ficha con otros parámetros (talla, color…). */
+function sameProduct(a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  try {
+    const ua = new URL(a);
+    const ub = new URL(b);
+    const stem = (u) => u.origin + u.pathname.replace(/\/+$/, '');
+    // sin ruta (tienda.com/?pid=…) el producto va en la query: solo vale el enlace exacto
+    return ua.pathname.split('/').filter(Boolean).length >= 1 && stem(ua) === stem(ub);
+  } catch { return false; }
+}
+
+function checkDuplicate(data) {
+  session.forceDup = false;
+  session.dupItem = null;
+  $('#addDup').classList.add('hidden');
+  if (!session.list || session.editingItem || !data || !data.url) return;
+  const dup = session.list.items.find((i) => sameProduct(i.url, data.url));
+  if (dup) showDuplicate(dup);
+}
+
+function showDuplicate(dup) {
+  session.dupItem = dup;
+  const box = $('#addDup');
+  box.innerHTML = `
+    <b>Ya tienes esta pieza en la lista</b>
+    <div class="dup__row">
+      ${dup.image
+        ? `<img class="dup__img" src="${esc(imgSrc(dup.image))}" alt="">`
+        : '<span class="dup__img" style="display:grid;place-items:center">🏷️</span>'}
+      <span class="grow small"><b>${esc(dup.title)}</b><br>
+        <span class="muted">${dup.priceText ? esc(dup.priceText) + ' · ' : ''}añadida ${timeAgo(dup.createdAt)}${dup.bought ? ' · comprada' : ''}</span></span>
+    </div>
+    <div class="dup__actions">
+      <button class="btn btn--sm" data-dup="open">Ver la que tienes</button>
+      <button class="btn btn--sm btn--ghost" data-dup="force">Guardar igualmente</button>
+    </div>`;
+  box.classList.remove('hidden');
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  buzz([10, 30, 10]);
 }
 
 function placeholderImg() {
@@ -768,6 +899,7 @@ async function saveItem() {
     currency: session.pending?.currency,
     source: session.pending?.source || 'manual',
     addedBy: store.data.profile.name,
+    force: session.forceDup,
   };
   const btn = $('#btnSaveItem');
   btn.disabled = true;
@@ -782,7 +914,9 @@ async function saveItem() {
     closeSheets();
     await refreshList();
   } catch (err) {
-    showAddError(err.message);
+    // el servidor también vigila los repetidos (por si la lista cambió desde otro móvil)
+    if (err.code === 'DUPLICATE' && err.data && err.data.item) showDuplicate(err.data.item);
+    else showAddError(err.message, { offerShot: false });
   } finally {
     btn.disabled = false;
   }
@@ -982,7 +1116,137 @@ function openItem(id) {
   $('#btnDeleteItem').classList.toggle('hidden', !isOwner);
   $('#btnEditItem').classList.toggle('hidden', !isOwner);
   $('#btnToggleBought').classList.toggle('hidden', !isOwner);
+  renderPriceBox(item);
   openSheet('sheet-item');
+}
+
+/* ------------------------------------------------- precio en la ficha */
+
+function renderPriceBox(item) {
+  const box = $('#itemPriceBox');
+  const hasUrl = /^https?:\/\//i.test(item.url || '');
+  const hasPrice = Number.isFinite(item.priceValue);
+  const isOwner = session.list.role === 'owner';
+  const show = hasUrl && (hasPrice || isOwner);
+  box.classList.toggle('hidden', !show);
+  const dropChip = $('#itemDrop');
+  dropChip.classList.add('hidden');
+  if (!show) return;
+
+  const cur = item.currency || 'EUR';
+  const drop = dropOf(item);
+  if (drop) { dropChip.textContent = `↓ ${drop.pct}%`; dropChip.classList.remove('hidden'); }
+
+  $('#ppNow').textContent = hasPrice ? money(item.priceValue, cur) : '—';
+
+  const before = $('#ppBefore');
+  before.className = '';
+  if (Number.isFinite(item.prevPrice)) {
+    before.textContent = money(item.prevPrice, cur);
+    before.classList.add('is-old');
+  } else if (Number.isFinite(item.basePrice) && hasPrice && Math.abs(item.basePrice - item.priceValue) > 0.004) {
+    before.textContent = money(item.basePrice, cur);
+    before.classList.add('is-old');
+  } else {
+    before.textContent = hasPrice ? 'igual' : '—';
+  }
+
+  const low = $('#ppLow');
+  low.className = '';
+  if (Number.isFinite(item.lowPrice)) {
+    low.textContent = money(item.lowPrice, cur);
+    if (hasPrice && item.lowPrice >= item.priceValue - 0.004) low.classList.add('is-low');
+  } else low.textContent = '—';
+
+  $('#ppChecked').textContent = item.checkedAt ? `Comprobado ${timeAgo(item.checkedAt)}` : 'Sin comprobar todavía';
+  const btn = $('#btnRecheck');
+  btn.classList.toggle('hidden', !isOwner);
+  btn.disabled = false;
+  btn.textContent = 'Comprobar ahora';
+
+  drawSpark([]);
+  loadHistory(item);
+}
+
+async function loadHistory(item) {
+  try {
+    const { points } = await api(`/lists/${session.list.slug}/items/${item.id}/history`, { slug: session.list.slug });
+    if (session.item && session.item.id === item.id) drawSpark(points || []);
+  } catch { drawSpark([]); }
+}
+
+/** Evolución del precio: línea a saltos, porque los precios cambian a saltos. */
+function drawSpark(points) {
+  const canvas = $('#itemSpark');
+  canvas.classList.toggle('hidden', points.length < 2);
+  if (points.length < 2) return;
+  const cw = canvas.clientWidth || 320;
+  canvas.width = cw * 2;
+  canvas.height = 92;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const vals = points.map((p) => p.value);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const span = max - min || Math.max(1, max * 0.1);
+  const pad = 12;
+  const x = (i) => pad + (i / (points.length - 1)) * (W - pad * 2);
+  const y = (v) => H - pad - ((v - min) / span) * (H - pad * 2);
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.beginPath();
+  ctx.moveTo(x(0), H);
+  points.forEach((p, i) => { if (i) ctx.lineTo(x(i), y(points[i - 1].value)); ctx.lineTo(x(i), y(p.value)); });
+  ctx.lineTo(x(points.length - 1), H);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(98, 250, 60, .28)';
+  ctx.fill();
+
+  ctx.beginPath();
+  points.forEach((p, i) => {
+    if (i === 0) ctx.moveTo(x(i), y(p.value));
+    else { ctx.lineTo(x(i), y(points[i - 1].value)); ctx.lineTo(x(i), y(p.value)); }
+  });
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#111113';
+  ctx.stroke();
+
+  const lx = x(points.length - 1);
+  const ly = y(vals[vals.length - 1]);
+  ctx.beginPath();
+  ctx.arc(lx, ly, 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#62fa3c';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+async function recheckItem() {
+  const item = session.item;
+  const list = session.list;
+  if (!item || !list) return;
+  const btn = $('#btnRecheck');
+  btn.disabled = true;
+  btn.textContent = 'Leyendo la tienda…';
+  try {
+    const r = await api(`/lists/${list.slug}/items/${item.id}/check`, { method: 'POST', slug: list.slug });
+    const idx = list.items.findIndex((i) => i.id === item.id);
+    if (idx >= 0) list.items[idx] = r.item;
+    session.item = r.item;
+    if (list.role === 'owner') store.syncList(list);
+    renderList();
+    renderPriceBox(r.item);
+    $('#itemPrice').textContent = r.item.priceText || 'sin precio';
+    if (!r.found) toast('No hemos podido leer el precio ahora mismo');
+    else if (r.dropped) toast(`¡Ha bajado un ${Math.abs(r.pct)}%! ✦`);
+    else if (r.changed) toast(`Ha subido un ${Math.abs(r.pct)}%`);
+    else toast('Sigue al mismo precio');
+  } catch (err) {
+    toast(err.message);
+    btn.disabled = false;
+    btn.textContent = 'Comprobar ahora';
+  }
 }
 
 async function toggleBought() {
@@ -1061,6 +1325,7 @@ async function openShare({ item = null } = {}) {
   $('#shareContribBox').classList.toggle('hidden', list.role !== 'owner' || !!item);
   refreshShareSheet();
   openSheet('sheet-share');
+  prepareCover(); // la portada se dibuja mientras tanto
 
   const box = $('#shareQr');
   box.innerHTML = '';
@@ -1136,6 +1401,412 @@ async function toggleContrib() {
   } catch (err) { toast(err.message); }
 }
 
+/* ------------------------------------------------ portada para historias */
+
+/**
+ * Una imagen 9:16 con la lista, en el mismo lenguaje que la app: papel con
+ * retícula, recortes con sombra dura, precio como pegatina y un QR que abre
+ * el enlace. Se dibuja en el móvil, sin pasar por el servidor.
+ */
+const coverCache = { key: '', blob: null, url: '' };
+
+function coverKey(list) {
+  return [list.slug, list.updatedAt, list.items.length, list.visibility, list.name, list.emoji].join(':');
+}
+
+async function prepareCover() {
+  const list = session.list;
+  const box = $('#shareCoverBox');
+  if (!list || session.sharingItem) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  const img = $('#shareCoverImg');
+  const skel = $('#shareCoverSkel');
+  const key = coverKey(list);
+  if (coverCache.key === key && coverCache.url) {
+    img.src = coverCache.url;
+    img.classList.remove('hidden');
+    skel.classList.add('hidden');
+    return;
+  }
+  img.classList.add('hidden');
+  skel.classList.remove('hidden');
+  try {
+    const blob = await renderCover(list);
+    if (coverCache.url) URL.revokeObjectURL(coverCache.url);
+    coverCache.key = key;
+    coverCache.blob = blob;
+    coverCache.url = URL.createObjectURL(blob);
+    if (!session.list || session.list.slug !== list.slug) return;
+    img.src = coverCache.url;
+    img.classList.remove('hidden');
+    skel.classList.add('hidden');
+  } catch {
+    skel.innerHTML = '<span class="small faint">No se ha podido dibujar la portada</span>';
+  }
+}
+
+function loadImage(src) {
+  return new Promise((resolve) => {
+    const im = new Image();
+    im.onload = () => resolve(im);
+    im.onerror = () => resolve(null);
+    im.src = src;
+  });
+}
+
+async function renderCover(list) {
+  const W = 1080;
+  const H = 1920;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const INK = '#111113';
+  const PAPER = '#fbfbfd';
+  const LIME = '#62fa3c';
+  const SKY = '#5d9bff';
+  const FAINT = '#8b8f9a';
+  const WASH = '#f3f1f7';
+  const GROTESK = '"Space Grotesk", system-ui, -apple-system, sans-serif';
+  const SERIF = '"Playfair Display", Georgia, serif';
+  const MONO = '"Space Mono", ui-monospace, monospace';
+  try {
+    await Promise.all([
+      document.fonts.load(`700 100px ${GROTESK}`),
+      document.fonts.load(`italic 400 60px ${SERIF}`),
+      document.fonts.load(`700 26px ${MONO}`),
+    ]);
+  } catch { /* con las de reserva también vale */ }
+
+  const items = list.items || [];
+  const total = sumTotal(items);
+  const drops = countDrops(items);
+  const url = `${location.origin}/l/${list.slug}`;
+
+  // papel, bruma de color y retícula
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, W, H);
+  const glow = (x, y, r, color) => {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, color);
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  };
+  glow(900, 320, 560, 'rgba(200,179,249,.6)');
+  glow(120, 820, 480, 'rgba(93,155,255,.34)');
+  glow(940, 1540, 540, 'rgba(98,250,60,.28)');
+  ctx.strokeStyle = 'rgba(93,155,255,.15)';
+  ctx.lineWidth = 2;
+  for (let x = 0; x <= W; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y <= H; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+  const setFont = (weight, size, family, style = '') => { ctx.font = `${style} ${weight} ${size}px ${family}`.trim(); };
+  const spacing = (px) => { if ('letterSpacing' in ctx) ctx.letterSpacing = px + 'px'; };
+  const box = (x, y, w, h, fill, { dx = 8, dy = 8, border = 3, shadow = INK } = {}) => {
+    if (dx || dy) { ctx.fillStyle = shadow; ctx.fillRect(x + dx, y + dy, w, h); }
+    ctx.fillStyle = fill;
+    ctx.fillRect(x, y, w, h);
+    ctx.lineWidth = border;
+    ctx.strokeStyle = INK;
+    ctx.strokeRect(x, y, w, h);
+  };
+  const tag = (text, x, y, { fill = '#fff', color = INK, size = 22, pad = 14, border = INK, align = 'left' } = {}) => {
+    setFont(700, size, MONO);
+    spacing(2);
+    const w = Math.ceil(ctx.measureText(text).width) + pad * 2;
+    const h = Math.round(size * 1.9);
+    const left = align === 'right' ? x - w : x;
+    ctx.fillStyle = fill;
+    ctx.fillRect(left, y, w, h);
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = border;
+    ctx.strokeRect(left, y, w, h);
+    ctx.fillStyle = color;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, left + pad, y + h / 2 + 1);
+    spacing(0);
+    ctx.textBaseline = 'alphabetic';
+    return { w, h, left };
+  };
+  const wrap = (text, maxW, maxLines) => {
+    const words = String(text).split(/\s+/).filter(Boolean);
+    const lines = [];
+    let line = '';
+    for (const w of words) {
+      const t = line ? line + ' ' + w : w;
+      if (ctx.measureText(t).width <= maxW || !line) line = t;
+      else { lines.push(line); line = w; }
+    }
+    if (line) lines.push(line);
+    if (lines.length > maxLines) {
+      lines.length = maxLines;
+      lines[maxLines - 1] = lines[maxLines - 1].replace(/\s*\S*$/, '') + '…';
+    }
+    return lines;
+  };
+  const rotated = (cx, cy, deg, draw) => {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate((deg * Math.PI) / 180);
+    draw();
+    ctx.restore();
+  };
+
+  /* cabecera: marca y etiqueta de registro */
+  setFont(700, 64, GROTESK);
+  spacing(-3);
+  ctx.fillStyle = INK;
+  ctx.textAlign = 'left';
+  ctx.fillText('HAUL', 96, 322);
+  const brandW = ctx.measureText('HAUL').width;
+  spacing(0);
+  ctx.fillStyle = SKY;
+  setFont(700, 40, GROTESK);
+  ctx.fillText('●', 96 + brandW + 2, 322);
+  tag('archivo / ' + new Date().getFullYear(), W - 96, 272, { fill: 'rgba(215,227,255,.92)', color: '#005cbb', border: SKY, align: 'right' });
+
+  /* titular */
+  setFont(700, 24, MONO);
+  spacing(3);
+  ctx.fillStyle = FAINT;
+  const kicker = `${items.length} ${items.length === 1 ? 'pieza' : 'piezas'}${total.value ? ' · ' + money(total.value, total.currency) : ''}${list.ownerName ? ' · de ' + list.ownerName : ''}`.toUpperCase();
+  ctx.fillText(kicker, 96, 430);
+  spacing(0);
+
+  const name = list.name || 'Mi haul';
+  let size = 124;
+  setFont(700, size, GROTESK);
+  spacing(-5);
+  while (ctx.measureText(name).width > 760 && size > 88) { size -= 6; setFont(700, size, GROTESK); }
+  let lines = [name];
+  if (ctx.measureText(name).width > 760) { size = 88; setFont(700, size, GROTESK); lines = wrap(name, 760, 2); }
+  ctx.fillStyle = INK;
+  let ty = 460 + size;
+  for (const l of lines) { ctx.fillText(l, 96, ty); ty += size * 0.98; }
+  spacing(0);
+  setFont(400, 58, SERIF, 'italic');
+  ctx.fillText('todo lo que quiero, en un sitio.', 96, ty + 16);
+  const titleBottom = ty + 40;
+
+  // el emoji de la lista, como pegatina redonda
+  rotated(W - 96 - 70, 520, 7, () => {
+    ctx.fillStyle = INK;
+    ctx.beginPath(); ctx.arc(8, 8, 70, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(0, 0, 70, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
+    setFont(400, 74, 'system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif');
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = INK;
+    ctx.fillText(list.emoji || '✶', 0, 6);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  });
+
+  /* collage de piezas */
+  const y0 = Math.max(titleBottom + 40, 740);
+  const candidates = items.filter((i) => i.image).slice(0, 6);
+  const loaded = (await Promise.all(candidates.map(async (i) => ({ item: i, img: await loadImage(imgSrc(i.image)) }))))
+    .filter((x) => x.img).slice(0, 3);
+  const noPicture = items.filter((i) => !i.image).slice(0, 3);
+
+  const card = (entry, x, y, s, deg) => {
+    rotated(x + s / 2, y + s / 2, deg, () => {
+      const left = -s / 2;
+      const top = -s / 2;
+      box(left, top, s, s, '#fff', { dx: 10, dy: 10 });
+      // mesa de trabajo detrás del recorte
+      ctx.fillStyle = WASH;
+      ctx.fillRect(left + 14, top + 14, s - 28, s - 28);
+      ctx.strokeStyle = 'rgba(93,155,255,.18)';
+      ctx.lineWidth = 1.5;
+      for (let gx = left + 14; gx <= left + s - 14; gx += 30) { ctx.beginPath(); ctx.moveTo(gx, top + 14); ctx.lineTo(gx, top + s - 14); ctx.stroke(); }
+      for (let gy = top + 14; gy <= top + s - 14; gy += 30) { ctx.beginPath(); ctx.moveTo(left + 14, gy); ctx.lineTo(left + s - 14, gy); ctx.stroke(); }
+      if (entry.img) {
+        const im = entry.img;
+        const inner = s - 60;
+        const k = Math.min(inner / im.naturalWidth, inner / im.naturalHeight);
+        const w = im.naturalWidth * k;
+        const h = im.naturalHeight * k;
+        ctx.save();
+        ctx.shadowColor = 'rgba(17,17,19,.18)';
+        ctx.shadowBlur = 18;
+        ctx.shadowOffsetY = 10;
+        ctx.drawImage(im, -w / 2, -h / 2, w, h);
+        ctx.restore();
+      } else {
+        setFont(600, Math.round(s * 0.085), GROTESK);
+        ctx.fillStyle = INK;
+        const ls = wrap(entry.item.title, s - 70, 4);
+        let yy = -((ls.length - 1) * s * 0.1) / 2;
+        for (const l of ls) { ctx.textAlign = 'center'; ctx.fillText(l, 0, yy); yy += s * 0.1; }
+        ctx.textAlign = 'left';
+      }
+      if (entry.item.shop) tag(entry.item.shop.toUpperCase().slice(0, 22), left + 16, top + 16, { size: Math.max(16, Math.round(s * 0.034)), pad: 10 });
+      if (entry.item.priceText) {
+        const ps = Math.max(26, Math.round(s * 0.062));
+        setFont(700, ps, GROTESK);
+        spacing(-1);
+        const pw = Math.ceil(ctx.measureText(entry.item.priceText).width) + 28;
+        const ph = Math.round(ps * 1.55);
+        const px = left + 16;
+        const py = top + s - 16 - ph;
+        ctx.fillStyle = LIME;
+        ctx.fillRect(px + 6, py + 6, pw, ph);
+        ctx.fillStyle = INK;
+        ctx.fillRect(px, py, pw, ph);
+        ctx.fillStyle = '#fff';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(entry.item.priceText, px + 14, py + ph / 2 + 1);
+        ctx.textBaseline = 'alphabetic';
+        spacing(0);
+      }
+      const d = dropOf(entry.item);
+      if (d) {
+        rotated(s / 2 - 70, s / 2 - 36, -8, () => tag(`↓ ${d.pct}%`, -50, -24, { fill: LIME, size: 24, pad: 12 }));
+      }
+    });
+  };
+
+  const entries = loaded.length ? loaded : noPicture.map((item) => ({ item, img: null }));
+  if (!entries.length) {
+    rotated(W / 2, y0 + 300, -2, () => {
+      box(-330, -300, 660, 600, '#fff', { dx: 12, dy: 12 });
+      setFont(400, 200, 'system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif');
+      ctx.textAlign = 'center';
+      ctx.fillStyle = INK;
+      ctx.fillText(list.emoji || '✶', 0, 40);
+      setFont(400, 40, SERIF, 'italic');
+      ctx.fillText('empieza con algo que no quieras perder.', 0, 200);
+      ctx.textAlign = 'left';
+    });
+  } else if (entries.length === 1) {
+    card(entries[0], 190, y0, 640, -2);
+  } else if (entries.length === 2) {
+    card(entries[0], 96, y0, 560, -2.5);
+    card(entries[1], 664, y0 + 300, 320, 4);
+  } else {
+    // una grande a la izquierda y dos pequeñas en columna, sin pisarse
+    card(entries[0], 96, y0, 560, -2.5);
+    card(entries[1], 664, y0 - 10, 320, 4);
+    card(entries[2], 664, y0 + 350, 320, -3);
+  }
+  if (items.length > entries.length && entries.length) {
+    rotated(240, y0 + 640, -4, () => tag(`+${items.length - entries.length} más`, -60, -26, { fill: LIME, size: 26, pad: 16 }));
+  }
+
+  /* resumen y QR (por encima de la franja que Instagram tapa con la respuesta) */
+  const sy = 1500;
+  box(96, sy, 640, 160, '#fff', { dx: 8, dy: 8, border: 3 });
+  const cells = [
+    [String(items.length), items.length === 1 ? 'pieza' : 'piezas'],
+    [total.value ? money(total.value, total.currency) : '—', 'total'],
+    drops ? [`↓ ${drops}`, drops === 1 ? 'bajada' : 'bajadas'] : [String(new Set(items.map((i) => i.shop).filter(Boolean)).size || 0), 'tiendas'],
+  ];
+  cells.forEach(([value, label], i) => {
+    const cx = 96 + (640 / 3) * i + 640 / 6;
+    if (i) { ctx.strokeStyle = '#e2e1e8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(96 + (640 / 3) * i, sy + 18); ctx.lineTo(96 + (640 / 3) * i, sy + 142); ctx.stroke(); }
+    ctx.textAlign = 'center';
+    ctx.fillStyle = INK;
+    let vs = 40;
+    setFont(700, vs, GROTESK);
+    spacing(-1.5);
+    while (ctx.measureText(value).width > 190 && vs > 24) { vs -= 2; setFont(700, vs, GROTESK); }
+    ctx.fillText(value, cx, sy + 84);
+    spacing(2);
+    setFont(700, 18, MONO);
+    ctx.fillStyle = FAINT;
+    ctx.fillText(label.toUpperCase(), cx, sy + 126);
+    spacing(0);
+    ctx.textAlign = 'left';
+  });
+
+  box(776, sy - 30, 208, 208, '#fff', { dx: 8, dy: 8 });
+  try {
+    await loadScript(CDN.qrcode);
+    const q = document.createElement('canvas');
+    await window.QRCode.toCanvas(q, url, { width: 344, margin: 0, color: { dark: INK, light: '#ffffff' } });
+    ctx.drawImage(q, 796, sy - 10, 168, 168);
+  } catch {
+    // sin el generador (sin conexión): el enlace escrito debajo sigue valiendo
+    setFont(700, 20, MONO);
+    ctx.fillStyle = FAINT;
+    ctx.textAlign = 'center';
+    ctx.fillText('haul', 880, sy + 84);
+    ctx.textAlign = 'left';
+  }
+  tag('escanéame', 984, sy - 76, { size: 18, pad: 10, align: 'right' });
+
+  setFont(700, 22, MONO);
+  spacing(1);
+  ctx.fillStyle = FAINT;
+  ctx.textAlign = 'center';
+  ctx.fillText(url.replace(/^https?:\/\//, ''), W / 2, 1724);
+  spacing(0);
+
+  // cinta final, como la de la portada de la app
+  ctx.fillStyle = LIME;
+  ctx.fillRect(0, 1788, W, 56);
+  ctx.fillStyle = INK;
+  ctx.fillRect(0, 1786, W, 3);
+  ctx.fillRect(0, 1842, W, 3);
+  setFont(700, 22, MONO);
+  spacing(4);
+  ctx.fillStyle = INK;
+  ctx.fillText('HAUL ✦ GUARDA ✦ ORGANIZA ✦ COMPARTE ✦ VIGILA ✦ TODO LO QUE QUIERES ✦', W / 2, 1824);
+  spacing(0);
+  ctx.textAlign = 'left';
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('No se ha podido crear la imagen'))), 'image/png');
+  });
+}
+
+async function shareCover() {
+  const list = session.list;
+  if (!list) return;
+  publishIfNeeded(); // la portada lleva el enlace y el QR: tiene que poder abrirse
+  try {
+    const blob = coverCache.key === coverKey(list) && coverCache.blob ? coverCache.blob : await renderCover(list);
+    const file = new File([blob], `haul-${list.slug}.png`, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: `${list.emoji} ${list.name}` });
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+      }
+    }
+    downloadBlob(blob, `haul-${list.slug}.png`);
+    toast('Imagen guardada: súbela a tu historia ✦');
+  } catch (err) {
+    toast(err.message || 'No se ha podido crear la portada');
+  }
+}
+
+function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 2000);
+}
+
+async function downloadCover() {
+  const list = session.list;
+  if (!list) return;
+  try {
+    const blob = coverCache.key === coverKey(list) && coverCache.blob ? coverCache.blob : await renderCover(list);
+    downloadBlob(blob, `haul-${list.slug}.png`);
+    toast('Imagen guardada ✦');
+  } catch (err) { toast(err.message); }
+}
+
 function saveSharedList() {
   const list = session.list;
   store.data.saved = (store.data.saved || []).filter((s) => s.slug !== list.slug);
@@ -1179,14 +1850,263 @@ async function quickShot() {
   $('#shotInput').click();
 }
 
+/* ------------------------------------------------- ordenar arrastrando */
+
+/**
+ * Con el ratón se arrastra directamente; con el dedo, tras mantener pulsado
+ * (si el dedo se mueve antes, es scroll y se deja en paz). Mientras se
+ * arrastra, una copia sigue al puntero y la tarjeta original se va colocando
+ * en su sitio nuevo; al soltar, el orden se guarda en el servidor.
+ */
+const drag = { el: null, ghost: null, timer: null, active: false, armed: false, startX: 0, startY: 0, offX: 0, offY: 0, dropped: 0 };
+
+function canReorder() {
+  const list = session.list;
+  return !!list && list.role === 'owner' && session.filter === 'all' && session.sort === 'manual' && list.items.length > 1;
+}
+
+function dragDown(e) {
+  if (!canReorder() || drag.el) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  const card = e.target.closest('.product[data-open-item]');
+  if (!card) return;
+  drag.el = card;
+  drag.startX = e.clientX;
+  drag.startY = e.clientY;
+  drag.active = false;
+  drag.armed = e.pointerType === 'mouse';
+  if (!drag.armed) drag.timer = setTimeout(() => liftCard(drag.startX, drag.startY), 330);
+  document.addEventListener('pointermove', dragMove, { passive: false });
+  document.addEventListener('pointerup', dragUp);
+  document.addEventListener('pointercancel', dragUp);
+}
+
+function liftCard(x, y) {
+  const el = drag.el;
+  if (!el) return;
+  drag.timer = null;
+  drag.active = true;
+  const r = el.getBoundingClientRect();
+  drag.offX = x - r.left;
+  drag.offY = y - r.top;
+  const ghost = el.cloneNode(true);
+  ghost.classList.add('drag-ghost');
+  ghost.style.width = r.width + 'px';
+  ghost.style.height = r.height + 'px';
+  ghost.style.left = r.left + 'px';
+  ghost.style.top = r.top + 'px';
+  document.body.appendChild(ghost);
+  drag.ghost = ghost;
+  el.classList.add('is-lifted');
+  buzz(18);
+}
+
+function dragMove(e) {
+  if (!drag.el) return;
+  if (!drag.active) {
+    if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 8) {
+      if (drag.timer) return dragEnd(false); // el dedo se movió antes de tiempo: era scroll
+      if (drag.armed) liftCard(e.clientX, e.clientY);
+    }
+    return;
+  }
+  e.preventDefault();
+  drag.ghost.style.left = (e.clientX - drag.offX) + 'px';
+  drag.ghost.style.top = (e.clientY - drag.offY) + 'px';
+  const over = document.elementsFromPoint(e.clientX, e.clientY)
+    .find((n) => n !== drag.el && n.classList && n.classList.contains('product') && n.dataset.openItem && !n.classList.contains('drag-ghost'));
+  if (!over) return;
+  const grid = drag.el.parentNode;
+  const cards = [...grid.querySelectorAll('.product[data-open-item]')];
+  const from = cards.indexOf(drag.el);
+  const to = cards.indexOf(over);
+  if (from < 0 || to < 0 || from === to) return;
+  grid.insertBefore(drag.el, from < to ? over.nextSibling : over);
+  buzz(6);
+}
+
+function dragUp() {
+  if (!drag.el) return;
+  dragEnd(drag.active);
+}
+
+function dragEnd(commit) {
+  if (drag.timer) { clearTimeout(drag.timer); drag.timer = null; }
+  document.removeEventListener('pointermove', dragMove);
+  document.removeEventListener('pointerup', dragUp);
+  document.removeEventListener('pointercancel', dragUp);
+  const wasActive = drag.active;
+  if (drag.ghost) drag.ghost.remove();
+  if (drag.el) drag.el.classList.remove('is-lifted');
+  drag.el = null;
+  drag.ghost = null;
+  drag.active = false;
+  drag.armed = false;
+  if (wasActive) {
+    drag.dropped = Date.now(); // el clic de soltar no debe abrir la ficha
+    if (commit) persistOrder();
+  }
+}
+
+async function persistOrder() {
+  const list = session.list;
+  if (!list) return;
+  const ids = [...$('#productGrid').querySelectorAll('.product[data-open-item]')].map((n) => n.dataset.openItem);
+  if (ids.join() === list.items.map((i) => i.id).join()) return;
+  const byId = new Map(list.items.map((i) => [i.id, i]));
+  list.items = ids.map((id) => byId.get(id)).filter(Boolean).concat(list.items.filter((i) => !ids.includes(i.id)));
+  renderList();
+  try {
+    await api(`/lists/${list.slug}/order`, { method: 'PUT', slug: list.slug, body: { ids } });
+    toast('Orden guardado ✦');
+  } catch (err) {
+    toast(err.message);
+    refreshList();
+  }
+}
+
+function initReorder() {
+  const grid = $('#productGrid');
+  grid.addEventListener('pointerdown', dragDown);
+  // mientras se arrastra con el dedo, la página no debe hacer scroll
+  grid.addEventListener('touchmove', (e) => { if (drag.active) e.preventDefault(); }, { passive: false });
+  grid.addEventListener('contextmenu', (e) => { if (canReorder()) e.preventDefault(); });
+  grid.addEventListener('dragstart', (e) => e.preventDefault());
+}
+
+/* ------------------------------------------------------- avisos push */
+
+function pushSupported() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+function pushOn() {
+  return !!(store.data.push && store.data.push.endpoint) && typeof Notification !== 'undefined' && Notification.permission === 'granted';
+}
+
+async function loadPushConfig() {
+  if (session.pushConfig) return session.pushConfig;
+  try { session.pushConfig = await api('/push/config'); }
+  catch { session.pushConfig = { enabled: false, key: '' }; }
+  return session.pushConfig;
+}
+
+function urlBase64ToUint8Array(base64) {
+  const padding = '='.repeat((4 - (base64.length % 4)) % 4);
+  const raw = atob((base64 + padding).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+}
+
+async function renderPushRow() {
+  const block = $('#pushBlock');
+  if (!block) return;
+  const cfg = await loadPushConfig();
+  const state = $('#pushState');
+  const btn = $('#btnPush');
+  const test = $('#btnPushTest');
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  $('#pushCopy').classList.toggle('hidden', !cfg.enabled);
+  test.classList.add('hidden');
+  if (!cfg.enabled) {
+    btn.classList.add('hidden');
+    state.textContent = 'Las bajadas se ven en la app, con su sticker.';
+    return;
+  }
+  if (!pushSupported()) {
+    btn.classList.add('hidden');
+    state.textContent = ios && !standalone
+      ? 'En iPhone, añade Haul a la pantalla de inicio para poder recibir avisos.'
+      : 'Este navegador no admite avisos.';
+    return;
+  }
+  btn.classList.remove('hidden');
+  const on = pushOn();
+  btn.textContent = on ? 'Desactivar' : 'Activar avisos';
+  state.textContent = on ? 'Activados en este dispositivo' : (Notification.permission === 'denied' ? 'Bloqueados en los ajustes del navegador' : 'Desactivados');
+  btn.disabled = Notification.permission === 'denied';
+  test.classList.toggle('hidden', !on);
+}
+
+function ownedLists() {
+  return store.data.lists.filter((l) => l.ownerToken).map((l) => ({ slug: l.slug, token: l.ownerToken }));
+}
+
+async function enablePush() {
+  const cfg = await loadPushConfig();
+  if (!cfg.enabled || !pushSupported()) return;
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { renderPushRow(); return toast('Sin permiso no podemos avisarte'); }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(cfg.key) });
+    await api('/push/subscribe', { method: 'POST', body: { subscription: sub.toJSON(), lists: ownedLists() } });
+    store.data.push = { endpoint: sub.endpoint };
+    store.save();
+    renderPushRow();
+    toast('Te avisaremos cuando baje un precio ✦');
+  } catch (err) {
+    toast(err.message || 'No se han podido activar los avisos');
+  }
+}
+
+async function disablePush() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      await api('/push/subscribe', { method: 'DELETE', body: { endpoint: sub.endpoint } }).catch(() => {});
+      await sub.unsubscribe().catch(() => {});
+    }
+  } catch { /* sin suscripción que quitar */ }
+  store.data.push = { endpoint: '' };
+  store.save();
+  renderPushRow();
+  toast('Avisos desactivados');
+}
+
+/** Tras crear o borrar una lista, el servidor tiene que saber cuáles vigilar para este móvil. */
+async function syncPushLists() {
+  if (!pushOn() || !pushSupported()) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return;
+    await api('/push/subscribe', { method: 'POST', body: { subscription: sub.toJSON(), lists: ownedLists() } });
+  } catch { /* se reintenta en el siguiente cambio */ }
+}
+
+async function testPush() {
+  try {
+    await api('/push/test', { method: 'POST', body: { endpoint: store.data.push.endpoint } });
+    toast('Aviso enviado: debería llegar en unos segundos');
+  } catch (err) { toast(err.message); }
+}
+
 /* -------------------------------------------------------------- eventos */
 
 document.addEventListener('click', (ev) => {
-  const el = ev.target.closest('[data-action],[data-open-list],[data-open-item],[data-nav],[data-filter],[data-emoji],[data-theme-pick],[data-avatar],[data-tab],[data-visibility]');
+  const el = ev.target.closest('[data-action],[data-open-list],[data-open-item],[data-open-drops],[data-dup],[data-nav],[data-filter],[data-emoji],[data-theme-pick],[data-avatar],[data-tab],[data-visibility]');
   if (!el) return;
 
   if (el.dataset.openList) return openList(el.dataset.openList);
-  if (el.dataset.openItem) return openItem(el.dataset.openItem);
+  if (el.dataset.openDrops) return openList(el.dataset.openDrops, { filter: 'drops' });
+  if (el.dataset.openItem) {
+    if (Date.now() - drag.dropped < 450) return; // acaba de soltar una pieza arrastrada
+    return openItem(el.dataset.openItem);
+  }
+  if (el.dataset.dup) {
+    const dup = session.dupItem;
+    if (el.dataset.dup === 'open' && dup) {
+      closeSheets();
+      setTimeout(() => openItem(dup.id), 260);
+    } else {
+      session.forceDup = true;
+      $('#addDup').classList.add('hidden');
+      toast('Vale, se guardará como una pieza más');
+    }
+    return;
+  }
   if (el.dataset.filter) { session.filter = el.dataset.filter; return renderList(); }
   if (el.dataset.tab) return setTab(el.dataset.tab);
 
@@ -1237,8 +2157,17 @@ $('#btnDeleteList').addEventListener('click', async () => {
     closeSheets();
     goto('home');
     toast('Lista eliminada');
+    syncPushLists();
   } catch (err) { toast(err.message); }
 });
+
+$('#btnSort').addEventListener('click', cycleSort);
+$('#btnRecheck').addEventListener('click', recheckItem);
+$('#btnShareCover').addEventListener('click', shareCover);
+$('#btnDownloadCover').addEventListener('click', downloadCover);
+$('#btnPush').addEventListener('click', () => (pushOn() ? disablePush() : enablePush()));
+$('#btnPushTest').addEventListener('click', testPush);
+initReorder();
 
 $('#btnHomeSave').addEventListener('click', () => quickSave());
 $('#homeUrlInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') quickSave(); });
@@ -1494,6 +2423,14 @@ function boot() {
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
+    // al tocar un aviso de bajada con Haul ya abierta, el service worker pide abrir la pieza
+    navigator.serviceWorker.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'open' && e.data.url) {
+        try { history.pushState({}, '', new URL(e.data.url).pathname); } catch { return; }
+        closeSheets();
+        route({ push: false });
+      }
+    });
     // Al activarse una versión nueva, la página se recarga una vez para no
     // seguir con el código antiguo hasta la siguiente visita.
     const hadController = !!navigator.serviceWorker.controller; // en la primera visita no hay nada que renovar
