@@ -1,6 +1,25 @@
-# Banco de pruebas · estado (25 oct 2026, v4.0)
+# Banco de pruebas · estado (26 oct 2026, v4.0)
 
-## Qué se ha hecho hoy
+## Primera pasada en Render con la 4.0 (26 oct): 86/100
+
+El desbloqueador funciona (42 fichas leídas a través de él; 4 aciertos de 14
+intentos en los fallos, ningún rechazo por saldo). De los 14 fallos:
+
+| Causa | Enlaces | Arreglo |
+|---|---|---|
+| Precio que volvió a cambiar desde el 25 oct | E049 (la rebaja terminó), E052 (-20 % nuevo) | hoja actualizada |
+| Snipes: el JSON-LD trae el precio sin rebajar | E042 | adaptador: manda el `selling-price` con clase `sale` del bloque de compra |
+| Temu: sin metadatos, pero el desbloqueador sí ve `window.rawData` | E061, E062 | adaptador: nombre, foto grande y precio por SKU del artículo de la URL; tolerancia 25 % porque el precio cambia a diario |
+| Zara Home: el JSON-LD describía la categoría | E096 | adaptador: el nombre sale del h1 de la ficha |
+| El desbloqueador devolvió su propia página de error ("This site can't be reached", "Proxy Error") y se tomó como ficha o como vacío | E006, E013 | se reconocen esas páginas, no cuentan como ficha, y hay un tercer intento |
+| Shein: la verificación tarda más de los 80 s del desbloqueador | E015, E016 | 150 s solo para Shein (los intentos fallidos no se cobran) |
+| Depop: Bright Data `policy_20050` | E069, E070 | requiere KYC de la cuenta; no se reintenta en balde |
+| About You sirve la portada a visitas automáticas; AliExpress E059 a veces sirve la página sin producto | E056, E059 | sin arreglo de código |
+
+Con esos arreglos desplegados, el techo realista en Render queda en **94–96/100**
+(fallan seguro Depop ×2 y, según el día, About You, AliExpress E059 y Shein).
+
+## Qué se hizo el 25 de octubre
 
 Se pasó el banco entero **en local** (Mac, IP residencial, Chromium instalado,
 **sin desbloqueador**) y se revisaron a mano, en un navegador de verdad, las fichas
@@ -28,9 +47,10 @@ de los 47 enlaces que fallaban. Conclusiones:
 
 | Dónde | Resultado | Qué falta |
 |---|---|---|
-| Local, sin desbloqueador | **66/100** | 29 muros anti-bot (Inditex ×10, H&M, Adidas, New Balance, Decathlon, Etsy, Zara Home, Maisons du Monde, Leroy Merlin, Fnac y, a ratos, Levi's E031), Shein ×2, Temu ×2, AliExpress E059 |
-| Producción con desbloqueador **con saldo** (estimación) | **92–95/100** | Temu ×2 (ficha sin precio ni foto para bots), AliExpress E059 (a ratos sirve la página sin producto), Levi's E032 (captcha que Bright Data rechaza), y según el día About You (portada a visitas automáticas) y Depop (requiere KYC en Bright Data) |
-| Producción con el desbloqueador **sin saldo** | ≈ 66/100 | los mismos muros que en local |
+| Local, sin desbloqueador (25 oct) | **66/100** | 29 muros anti-bot (Inditex ×10, H&M, Adidas, New Balance, Decathlon, Etsy, Zara Home, Maisons du Monde, Leroy Merlin, Fnac y, a ratos, Levi's E031), Shein ×2, Temu ×2, AliExpress E059 |
+| Render con desbloqueador, antes de los arreglos del 26 oct | **86/100** | los 14 de la tabla de arriba |
+| Render con desbloqueador y los arreglos del 26 oct (estimación) | **94–96/100** | Depop ×2 (KYC), About You, AliExpress E059 y Shein según el día |
+| Render con el desbloqueador **sin cupo** | ≈ 66/100 | los mismos muros que en local |
 
 Los 29 muros locales son exactamente las tiendas que en producción pasan por el
 desbloqueador: Akamai y similares bloquean tanto `fetch` como Chromium sin cabeza,

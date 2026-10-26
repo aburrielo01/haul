@@ -52,6 +52,14 @@ cada pieza y te lo cuenta. Las cuatro cosas que el README de la 3.x dejaba como
   rebajas que terminaron en Vans y Levi's…). Cada fila lleva ahora `verified`
   (fecha de la última comprobación) y, las de precio volátil, `tolerance`.
 - Depop: el nombre sale del alt de la galería, no de la descripción cortada.
+- Adaptadores nuevos: Snipes (precio rebajado del bloque de compra; su JSON-LD
+  trae el normal), Temu (nombre, foto y precio desde `window.rawData`, que el
+  desbloqueador sí ve) y Zara Home (nombre del h1; su JSON-LD a veces describe
+  la categoría).
+- El desbloqueador reconoce sus propias páginas de error ("This site can't be
+  reached", "Proxy Error") y vuelve a intentar hasta tres veces; un dominio que
+  Bright Data no permite (`policy_…`) no se reintenta. Shein tiene 150 s de
+  margen en vez de 80.
 - `fetch` reintenta una vez tras un 429 antes de gastar desbloqueador o Chromium.
 - El informe cuenta qué hizo el desbloqueador en los fallos y avisa cuando no
   acierta ninguno (cuenta sin saldo o sin verificar). Estado y pendientes en

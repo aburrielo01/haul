@@ -32,7 +32,54 @@ const AMAZON = `<!doctype html><html><head><title>Reality transurfing... : Zelan
 <div class="a-section"><span class="a-color-price">Precio por página 0,05 €</span></div>
 </body></html>`;
 
+// Snipes: el JSON-LD lleva el precio sin rebajar; el bloque de compra, el rebajado.
+const SNIPES = `<!doctype html><html><head><title>adidas Originals Handball Spezial verde | JR2121 | SNIPES</title>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Handball Spezial","image":"https://asset.snipes.com/images/x.jpg","offers":{"@type":"Offer","price":109.99,"priceCurrency":"EUR","availability":"https://schema.org/InStock"}}</script></head>
+<body><h1>Handball Spezial</h1>
+<div class="tile"><span data-id="selling-price" class="price"><span class="sr-only">Precio</span> 109,99&nbsp;€ </span></div>
+<div class="tile"><span data-id="selling-price" class="price sale"><span class="sr-only">Precio</span> 83,99&nbsp;€ </span><del data-id="cross-price" class="strikeout"><span class="sr-only">Precio original</span> 109,99&nbsp;€</del></div>
+</body></html>`;
+
+// Temu: nada de metadatos; todo en window.rawData, con el artículo localizado por su goodsId.
+const TEMU = `<!doctype html><html><head><title>4/5 niveles estantería   estante multiuso almacenaje - Temu Spain</title></head><body>
+<script>window.rawData={"store":{"goods":{"goodsId":609424903114409,"mallId":1,"goodsName":"4\\u002F5 Niveles Estanter\\u00eda Met\\u00e1lica, Estante Multiuso de Almacenaje","isOnsale":1,"thumbUrl":"","hdThumbUrl":"https:\\u002F\\u002Fimg-eu.kwcdn.com\\u002Flocal-goods-img\\u002Fabc_1500x1500.png"},"sku":[{"normalPrice":1274,"normalPriceStr":"12,74\\u20ac","salePriceRich":[{"text":"12,74"}]}],"otros":[{"goodsId":1,"goodsName":"Otro","normalPriceStr":"3,00\\u20ac"}]}};</script>
+</body></html>`;
+
+// Zara Home: el JSON-LD puede describir la categoría; el h1 siempre es la ficha.
+const ZARAHOME = `<!doctype html><html><head><title>SET COFRE REGALO GINGERBREAD (SET DE 3) - VER TODO | Zara Home España</title>
+<script type="application/ld+json">{"@type":"Product","name":"Fragancias y ambientadores para casa","image":"https://static.zarahome.net/a.jpg","offers":{"@type":"Offer","price":"29.99","priceCurrency":"EUR"}}</script></head>
+<body><h1 class="product-detail-content__product-name">SET COFRE REGALO&nbsp;GINGERBREAD (SET DE 3)</h1></body></html>`;
+
 console.log('\nHaul · adaptadores\n');
+
+ok('Snipes: manda el precio rebajado del bloque de compra, no el del JSON-LD', () => {
+  const p = parseHtml(SNIPES, 'https://www.snipes.com/es-es/p/adidas-originals-handball-spezial-00013802949838/');
+  assert.strictEqual(p.adapter, 'snipes');
+  assert.strictEqual(parsePrice(p.priceRaw).value, 83.99);
+});
+ok('Temu: nombre, foto y precio salen del rawData del artículo de la URL', () => {
+  const p = parseHtml(TEMU, 'https://www.temu.com/es/4-5-niveles-estanteria-g-609424903114409.html?spec=1');
+  assert.strictEqual(p.adapter, 'temu');
+  assert.strictEqual(p.title, '4/5 Niveles Estantería Metálica, Estante Multiuso de Almacenaje');
+  assert.strictEqual(p.image, 'https://img-eu.kwcdn.com/local-goods-img/abc_1500x1500.png');
+  assert.strictEqual(parsePrice(p.priceRaw).value, 12.74);
+  assert.strictEqual(p.currency, 'EUR');
+});
+ok('Temu: sin el artículo en la página no inventa nada', () => {
+  const p = parseHtml(TEMU, 'https://www.temu.com/es/otra-cosa-g-111111111.html');
+  assert.strictEqual(p.priceRaw, '');
+});
+ok('Zara Home: el nombre viene del h1 aunque el JSON-LD describa la categoría', () => {
+  const p = parseHtml(ZARAHOME, 'https://www.zarahome.com/es/set-cofre-regalo-gingerbread-set-de-3-l42488747?ct=true');
+  assert.strictEqual(p.title, 'SET COFRE REGALO GINGERBREAD (SET DE 3)');
+  assert.strictEqual(parsePrice(p.priceRaw).value, 29.99);
+});
+ok('las páginas de error del proxy del desbloqueador no pasan por fichas', () => {
+  const { looksProxyError } = require('../lib/extract');
+  assert.strictEqual(looksProxyError('<html><head><title>This site can’t be reached</title></head><body>ERR_CONNECTION_RESET</body></html>'), true);
+  assert.strictEqual(looksProxyError('<html><head><title>Proxy Error</title></head><body>502</body></html>'), true);
+  assert.strictEqual(looksProxyError(SNIPES), false);
+});
 
 ok('Amazon: título limpio desde #productTitle', () => {
   const p = parseHtml(AMAZON, 'https://www.amazon.es/dp/849777728X');

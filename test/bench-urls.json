@@ -407,10 +407,11 @@
     "shop": "Snipes",
     "url": "https://www.snipes.com/es-es/p/adidas-originals-handball-spezial-olive-stratacream-whitegum5-handball-spezial-verde-48200",
     "title": "Handball Spezial",
-    "price": 87.99,
+    "price": 83.99,
     "currency": "EUR",
-    "note": "precio rebajado (antes 109,99; 25 oct, era 98,99)",
-    "verified": "2026-10-25"
+    "note": "precio rebajado del bloque de compra (JSON-LD trae el normal 109,99); la rebaja cambia cada semana (26 oct: 83,99; 25 oct: 87,99)",
+    "verified": "2026-10-26",
+    "tolerance": 0.1
   },
   {
     "id": "E043",
@@ -477,10 +478,10 @@
     "shop": "El Corte Inglés",
     "url": "https://www.elcorteingles.es/moda-mujer/A200809844-marron-oscuro-pr-botas-chelsea-2976-leonore-ii-de-mujer-en-piel-blanda-con-forro-sintetico/",
     "title": "Botas Chelsea 2976 Leonore II de mujer en piel blanda con forro sintético - Dr. Martens - Marrón oscuro",
-    "price": 147,
+    "price": 210,
     "currency": "EUR",
-    "note": "precio rebajado 30 % (antes 210; 25 oct)",
-    "verified": "2026-10-25"
+    "note": "la rebaja del 30 % (147) terminó el 26 oct; vuelve a 210",
+    "verified": "2026-10-26"
   },
   {
     "id": "E050",
@@ -507,10 +508,10 @@
     "shop": "Zalando",
     "url": "https://www.zalando.es/puma-camiseta-de-futbol-faster-yellow-puma-black-pu141d1di-e11.html",
     "title": "Equipación de clubes - faster yellow-puma black",
-    "price": 99.95,
+    "price": 79.95,
     "currency": "EUR",
-    "note": "",
-    "verified": "2026-10-25"
+    "note": "-20 % desde el 26 oct (antes 99,95)",
+    "verified": "2026-10-26"
   },
   {
     "id": "E053",
@@ -597,9 +598,11 @@
     "shop": "Temu",
     "url": "https://www.temu.com/es/calcetines-deportivos-de-exterior-para--paquete-de---calcetines-para-senderismo-y-correr-calcetines-de-futbol-calcetines-deportivos-de-exterior-antideslizantes-calcetines-antideslizantes-redondos-de-silicona-g-605518999454747.html?_oak_mp_inf=EJuI%2BIb21okBGhV0b3BfcGlja3NfbGlzdF9rejMxdXMg0p7d2JE0&top_gallery_url=https%3A%2F%2Fimg.kwcdn.com%2Fproduct%2Ffancy%2Fa8a0cd5b-8105-464f-9ac1-a825d7be462f.jpg&spec_gallery_id=37975802756&refer_page_sn=10132&freesia_scene=2036&_oak_freesia_scene=2036&_oak_rec_ext_1=NTkx&refer_page_el_sn=201401&_x_sessn_id=9hy021umtk&refer_page_name=lightning-deals&refer_page_id=10132_1791455875815_2n626arcqy",
     "title": "Calcetines deportivos de exterior para hombre y mujer, paquete de 5/10 pares, calcetines para senderismo y correr, calcetines de fútbol, calcetines deportivos de exterior antideslizantes, calcetines antideslizantes redondos de silicona",
-    "price": 5.91,
+    "price": 8,
     "currency": "EUR",
-    "note": ""
+    "note": "Temu cambia el precio a diario (26 oct: 8,00; 10 oct: 5,91); por eso tolera un 25 %",
+    "tolerance": 0.25,
+    "verified": "2026-10-26"
   },
   {
     "id": "E062",
@@ -608,7 +611,9 @@
     "title": "Metálica, Estante Multiuso de Almacenaje con Baldas Ajustables, Acero Galvanizado, Carga Máxima 600kg / 875kg, Ideal para Garaje, Trastero, Taller y Hogar",
     "price": 12.74,
     "currency": "EUR",
-    "note": ""
+    "note": " Temu cambia el precio a diario; tolera un 25 %",
+    "tolerance": 0.25,
+    "verified": "2026-10-26"
   },
   {
     "id": "E063",
