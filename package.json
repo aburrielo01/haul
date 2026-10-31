@@ -1,6 +1,6 @@
 {
   "name": "haul",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "private": true,
   "description": "Haul — guarda, organiza y comparte todo lo que quieres comprar",
   "main": "server.js",

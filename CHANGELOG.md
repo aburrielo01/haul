@@ -1,5 +1,19 @@
 # Cambios
 
+## 4.0.1 · 31 de octubre de 2026
+
+Dos arreglos del despliegue de la 4.0.
+
+- La build de Render caía en `npm install`: la imagen de Playwright pasó a
+  Node 24 y `better-sqlite3` 11 no traía binario para él, así que intentaba
+  compilar en una imagen sin `make`. `better-sqlite3` sube a 12.x (sí lo trae)
+  y el Dockerfile instala `python3 make g++` por si vuelve a faltar.
+- El botón "Instalar" del Atajo descargaba la página en vez del Atajo: al
+  subir el fichero a GitHub desde el Mac, la «ñ» del nombre llegó a Linux en
+  forma descompuesta y la ruta ya no lo encontraba. El fichero pasa a
+  `public/atajo/anadir-a-haul.shortcut` y el servidor acepta cualquier
+  escritura del nombre; se descarga igualmente como «Añadir a Haul».
+
 ## 4.0.0 · 24 de octubre de 2026
 
 La primera versión que hace algo por ti después de guardar: vigila el precio de
@@ -85,10 +99,7 @@ cada pieza y te lo cuenta. Las cuatro cosas que el README de la 3.x dejaba como
 - `extractFromUrl(url, { cheap: true })` para lecturas sin coste.
 - `/api/health` cuenta cómo va la vigilancia y si los avisos están activos.
 - Pruebas nuevas: `node test/watch.js` y más casos en `npm test`.
-- Dependencia nueva: `web-push`. `better-sqlite3` sube a 12.x: la imagen de
-  Playwright pasó a Node 24 y la 11.x no traía binario para él, así que la
-  build de Render caía en `node-gyp` sin `make`. El Dockerfile instala
-  además `python3 make g++` por si vuelve a faltar un binario.
+- Dependencia nueva: `web-push`.
 
 ## 3.x · septiembre–octubre de 2026
 

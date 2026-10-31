@@ -67,7 +67,7 @@ como foto— y la app abre el formulario con eso ya cargado. En Android funciona
 compartir del sistema; en iPhone, que todavía no lo admite, está el botón
 *Pegar imagen copiada* dentro de la pestaña Captura.
 
-**El Atajo de iPhone.** `public/atajo/Añadir a Haul.shortcut` es un Atajo firmado
+**El Atajo de iPhone.** `public/atajo/anadir-a-haul.shortcut` es un Atajo firmado (nombre sin «ñ»: Linux distingue las dos formas Unicode de la letra y GitHub la subió descompuesta)
 (se instala con un toque desde Perfil → *Haul en el menú Compartir*) con tres
 acciones: *Obtener URLs de la entrada* → *Texto* `https://…/#add=<URLs>` → *Abrir
 URL*. La primera acción es la que importa: una página de Safari o el texto de una
@@ -76,7 +76,7 @@ recibe "ZARA España" en vez de la ficha. Si cambias de dominio, regenera el fic
 
 ```bash
 python3 scripts/make-shortcut.py https://tu-dominio.com atajo.shortcut
-shortcuts sign --mode anyone --input atajo.shortcut --output "public/atajo/Añadir a Haul.shortcut"   # en un Mac
+shortcuts sign --mode anyone --input atajo.shortcut --output public/atajo/anadir-a-haul.shortcut   # en un Mac
 ```
 
 ## Ponerlo en marcha

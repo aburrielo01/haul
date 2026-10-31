@@ -617,6 +617,24 @@ app.get('/api/img', async (req, res) => {
 
 /* ----------------------------------------------------- páginas y estáticos */
 
+/**
+ * El Atajo de iPhone firmado. El fichero vive con nombre ASCII
+ * (anadir-a-haul.shortcut) porque al subirlo a GitHub desde un Mac la «ñ»
+ * llegó a Linux en forma descompuesta (n + tilde) y la ruta con «ñ» compuesta
+ * ya no lo encontraba. Aquí se acepta cualquier escritura del nombre, incluido
+ * el antiguo con «ñ», y se descarga con su nombre bonito.
+ */
+const SHORTCUT_FILE = path.join(PUBLIC_DIR, 'atajo', 'anadir-a-haul.shortcut');
+const SHORTCUT_NAMES = new Set(['anadir-a-haul.shortcut', 'Añadir a Haul.shortcut'.normalize('NFC')]);
+app.get('/atajo/:name', (req, res, next) => {
+  const name = String(req.params.name || '').normalize('NFC');
+  if (!SHORTCUT_NAMES.has(name)) return next();
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent('Añadir a Haul.shortcut')}`);
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(SHORTCUT_FILE);
+});
+
 app.use(express.static(PUBLIC_DIR, {
   maxAge: '7d',
   setHeaders: (res, filePath) => {
