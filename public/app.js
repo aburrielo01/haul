@@ -2184,7 +2184,7 @@ $('#btnHomePaste').addEventListener('click', async () => {
 $('#btnReadUrl').addEventListener('click', readUrl);
 $('#mobileTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-mtab]'); if (b) setMobileTab(b.dataset.mtab); });
 $('#btnCopyHaulAddr').addEventListener('click', async () => {
-  try { await navigator.clipboard.writeText(ADD_ADDRESS); toast('Dirección copiada ✦ pégala en el paso 5'); }
+  try { await navigator.clipboard.writeText(ADD_ADDRESS); toast('Dirección copiada ✦ pégala en el paso 5 de la receta a mano'); }
   catch { toast(ADD_ADDRESS); }
 });
 $('#urlInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') readUrl(); });
@@ -2349,12 +2349,18 @@ async function route({ push = true } = {}) {
     : { file: null, text: params.get('url') || params.get('text') || '' };
   // El Atajo de iPhone abre /#add=<enlace>: va tras la almohadilla para que
   // los parámetros del enlace de la tienda (?size=35&color=…) lleguen enteros.
+  let shortcutWithoutLink = false;
   if (!incoming.text && /^#add=?/.test(location.hash)) {
     const text = safeDecode(location.hash.replace(/^#add=?/, ''));
     incoming = { file: null, text };
     if (!text.trim()) {
       history.replaceState({}, '', '/');
-      toast('El Atajo ha llegado vacío: revisa el paso 5 (el chip "Entrada de atajo" tras la dirección)');
+      toast('El Atajo ha llegado vacío: instala el Atajo nuevo desde Perfil → Haul en el menú Compartir');
+    } else if (!/https?:\/\//i.test(text)) {
+      // El Atajo antiguo mandaba el título de la página ("ZARA España") en vez
+      // del enlace: con eso no hay ficha que leer. Mejor explicarlo que enseñar
+      // una pieza que solo lleva el nombre de la tienda.
+      shortcutWithoutLink = true;
     }
   }
   // Lo que manda el Atajo se enseña aunque no traiga enlace: así se ve qué llegó.
@@ -2371,6 +2377,14 @@ async function route({ push = true } = {}) {
     goto('home', { push });
   } else {
     goto('welcome', { push });
+  }
+
+  if (shortcutWithoutLink) {
+    history.replaceState({}, '', '/');
+    setMobileTab('ios');
+    openSheet('sheet-mobile');
+    toast(`El Atajo ha mandado «${incoming.text.trim().slice(0, 40)}» en vez del enlace. Instala el Atajo nuevo: este sí lo saca.`);
+    return;
   }
 
   if (sharedUrl || incoming.file || fromShortcut) {

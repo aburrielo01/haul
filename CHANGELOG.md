@@ -45,6 +45,17 @@ cada pieza y te lo cuenta. Las cuatro cosas que el README de la 3.x dejaba como
   total, bajadas y un QR que abre el enlace. Se comparte directamente a
   Instagram o WhatsApp, o se guarda como imagen.
 
+### Atajo de iPhone y entradas
+
+- El Atajo "Añadir a Haul" viene hecho y firmado (`public/atajo/`): se instala
+  con un toque desde el perfil. Extrae el enlace de lo que compartes antes de
+  abrir Haul; el Atajo antiguo mandaba el título de la página ("ZARA España") y
+  la pieza nacía sin ficha. Si llega un título sin enlace, Haul lo explica y
+  ofrece el Atajo nuevo en vez de guardar el nombre de la tienda.
+- El lector entiende eventos (JSON-LD `Event`): nombre, cartel y fecha con
+  recinto en la nota. Vivaticket no publica el precio en la ficha; se deja a
+  mano. Las pantallas intermedias de Incapsula y similares cuentan como muro.
+
 ### Banco de pruebas
 
 - Hoja de verdad revisada ficha a ficha el 25 de octubre: 18 precios habían

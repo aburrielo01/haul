@@ -11,6 +11,17 @@ services:
         value: production
       - key: DATA_DIR
         value: /data
+      # Vigilancia de precios (v4): cada 12 h, solo intentos gratuitos. WATCH=off la apaga.
+      - key: WATCH_EVERY_H
+        value: "12"
+      # Avisos push (v4): genera el par con `npx web-push generate-vapid-keys`
+      # y ponlo en el panel de Render; sin claves la app funciona sin avisos.
+      # - key: VAPID_PUBLIC_KEY
+      #   sync: false
+      # - key: VAPID_PRIVATE_KEY
+      #   sync: false
+      # - key: VAPID_SUBJECT
+      #   value: mailto:tu@correo
       # Si prefieres Postgres en vez de SQLite, descomenta y crea la base de datos:
       # - key: DATABASE_URL
       #   fromDatabase:

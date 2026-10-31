@@ -67,6 +67,18 @@ como foto— y la app abre el formulario con eso ya cargado. En Android funciona
 compartir del sistema; en iPhone, que todavía no lo admite, está el botón
 *Pegar imagen copiada* dentro de la pestaña Captura.
 
+**El Atajo de iPhone.** `public/atajo/Añadir a Haul.shortcut` es un Atajo firmado
+(se instala con un toque desde Perfil → *Haul en el menú Compartir*) con tres
+acciones: *Obtener URLs de la entrada* → *Texto* `https://…/#add=<URLs>` → *Abrir
+URL*. La primera acción es la que importa: una página de Safari o el texto de una
+app se convierten en su enlace; sin ella, iOS manda el título de la página y Haul
+recibe "ZARA España" en vez de la ficha. Si cambias de dominio, regenera el fichero:
+
+```bash
+python3 scripts/make-shortcut.py https://tu-dominio.com atajo.shortcut
+shortcuts sign --mode anyone --input atajo.shortcut --output "public/atajo/Añadir a Haul.shortcut"   # en un Mac
+```
+
 ## Ponerlo en marcha
 
 ```bash
@@ -195,8 +207,9 @@ vio ese intento: es la materia prima para escribir el adaptador de una tienda.
 ## Banco de pruebas
 
 Mide qué porcentaje de los enlaces de `test/bench-urls.json` se leen bien (nombre,
-precio y foto). Corre en segundo plano en el servidor y guarda el estado en la base de
-datos. Con `DIAG_TOKEN` definido:
+precio y foto). El objetivo es **el 92 %** (`TARGET_PCT` en `lib/bench.js`; el
+informe lo marca con ✓ o ✗). Corre en segundo plano en el servidor y guarda el
+estado en la base de datos. Con `DIAG_TOKEN` definido:
 
 ```
 /api/bench/run?key=TU_DIAG_TOKEN            lanza los 100 (acepta &shop=Zara, &limit=10, &ids=E001,E002)

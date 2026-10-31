@@ -378,18 +378,27 @@
     </div>
 
     <div id="mtab-ios">
-      <p class="small muted" style="margin-top:12px">Apple no deja que una web entre en el menú Compartir, pero los <b>Atajos</b> sí. Se monta una vez, en dos minutos.</p>
+      <p class="small muted" style="margin-top:12px">Apple no deja que una web entre en el menú Compartir, pero los <b>Atajos</b> sí. Haul trae el suyo ya hecho: se instala con un toque.</p>
       <ol class="steps">
-        <li><b>Copia la dirección de Haul</b> con el botón de abajo. La necesitas en el paso 5.
-          <button class="btn btn--sm" style="margin-top:8px" id="btnCopyHaulAddr">Copiar dirección</button></li>
-        <li>Abre la app <b>Atajos</b> (viene con el iPhone) y toca <b>+</b> arriba a la derecha.</li>
-        <li>Toca el nombre de arriba y ponle <b>Añadir a Haul</b>.</li>
-        <li>Toca el icono <b>ⓘ</b> de abajo y activa <b>Mostrar en la hoja de compartir</b>. Arriba aparecerá la acción <i>Recibir … de Hoja de compartir</i>.</li>
-        <li>Toca <b>Añadir acción</b> y añade la acción <b>Texto</b>. Dentro, pega la dirección que copiaste y, justo detrás, toca el chip <b>Entrada de atajo</b> que te ofrece el teclado. Queda así:
-          <code class="steps__code">https://haul-o6sv.onrender.com/#add=<span class="chip">Entrada de atajo</span></code></li>
-        <li>Añade la acción <b>Abrir URL</b>. Se conecta sola con el texto. Toca <b>OK</b>.</li>
+        <li><b>Instala el Atajo.</b> Safari lo descarga y lo abre en la app Atajos; toca <b>Añadir atajo</b>.
+          <a class="btn btn--sm btn--sticker" style="margin-top:8px" id="btnInstallShortcut" href="/atajo/A%C3%B1adir%20a%20Haul.shortcut" download="Añadir a Haul.shortcut">Instalar «Añadir a Haul»</a>
+          <span class="small faint" style="display:block;margin-top:6px">Si Safari lo guarda en Archivos en vez de abrirlo, tócalo ahí.</span></li>
+        <li>En cualquier tienda o en Safari: <b>Compartir → Añadir a Haul</b>. La primera vez pide permiso para abrir Haul.</li>
       </ol>
-      <p class="small muted">Listo. En Zalando, Zara o la que sea: Compartir → desliza hasta <b>Añadir a Haul</b> (la primera vez pide permiso). Se abre Haul en Safari con el producto ya leído.</p>
+      <p class="small muted">El Atajo saca el <b>enlace</b> de lo que compartes (una página de Safari, el texto de una app, un enlace suelto) y abre Haul con él. Si tenías el Atajo antiguo, bórralo: ese mandaba el título de la página en vez del enlace.</p>
+      <details class="steps__manual">
+        <summary class="linkbtn">Prefiero montarlo a mano</summary>
+        <ol class="steps" style="margin-top:10px">
+          <li><b>Copia la dirección de Haul</b> con el botón de abajo. La necesitas en el paso 5.
+            <button class="btn btn--sm" style="margin-top:8px" id="btnCopyHaulAddr">Copiar dirección</button></li>
+          <li>Abre la app <b>Atajos</b>, toca <b>+</b> y ponle de nombre <b>Añadir a Haul</b>.</li>
+          <li>Toca <b>ⓘ</b> y activa <b>Mostrar en la hoja de compartir</b>.</li>
+          <li>Añade la acción <b>Obtener URLs de la entrada</b>. Es la que convierte una página de Safari o el texto de una app en su enlace.</li>
+          <li>Añade la acción <b>Texto</b>: pega la dirección y, justo detrás, toca el chip <b>URLs</b> (la salida del paso anterior):
+            <code class="steps__code">https://haul-o6sv.onrender.com/#add=<span class="chip">URLs</span></code></li>
+          <li>Añade <b>Abrir URL</b>. Se conecta sola con el texto.</li>
+        </ol>
+      </details>
     </div>
 
     <div id="mtab-android" class="hidden">

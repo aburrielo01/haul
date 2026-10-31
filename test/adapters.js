@@ -74,6 +74,34 @@ ok('Zara Home: el nombre viene del h1 aunque el JSON-LD describa la categoría',
   assert.strictEqual(p.title, 'SET COFRE REGALO GINGERBREAD (SET DE 3)');
   assert.strictEqual(parsePrice(p.priceRaw).value, 29.99);
 });
+// Entradas: Vivaticket publica un Event, no un Product, y nunca el precio.
+const EVENT = `<!doctype html><html><head><title>WICKED, EL MUSICAL</title>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Event","name":"WICKED, EL MUSICAL","startDate":"2026-10-31T16:00:00","endDate":"2026-12-20T16:00:00","location":{"@type":"Place","name":"Nuevo Teatro Alcalá","address":{"@type":"PostalAddress","addressLocality":"Madrid"}},"image":["https://res.cloudinary.com/vivaticket/image/fetch/cartel.jpg"]}</script></head>
+<body><h1>WICKED, EL MUSICAL</h1><p>Teatro · Prosa</p></body></html>`;
+const CONCERT = `<!doctype html><html><head><script type="application/ld+json">{"@type":"MusicEvent","name":"Pignoise","startDate":"2026-11-19T21:00:00","location":{"@type":"Place","name":"Sala Razzmatazz","address":{"addressLocality":"Barcelona"}},"image":"https://x/cartel.jpg","offers":{"@type":"Offer","price":"28.00","priceCurrency":"EUR","availability":"https://schema.org/InStock"}}</script></head><body></body></html>`;
+// Pantalla intermedia de Incapsula: 6 KB sin contenido, solo su script.
+const INCAPSULA = `<!doctype html><html><head><title>Vivaticket</title><link rel="apple-touch-icon" href="https://cdn.vivaticket.com/i.png"><script src="/_Incapsula_Resource?SWJIYLWA=abc&ns=1"></script></head><body></body></html>`;
+
+ok('un Event se lee como pieza: nombre, cartel y fecha con recinto en la nota', () => {
+  const { isWall } = require('../lib/extract');
+  const p = parseHtml(EVENT, 'https://www.vivaticket.com/es/ticket/wicked-el-musical/1735');
+  assert.strictEqual(p.title, 'WICKED, EL MUSICAL');
+  assert.strictEqual(p.image, 'https://res.cloudinary.com/vivaticket/image/fetch/cartel.jpg');
+  assert.strictEqual(p.note, '31 oct – 20 dic 2026 · Nuevo Teatro Alcalá, Madrid');
+  assert.strictEqual(p.priceRaw, '');
+  assert.strictEqual(isWall(p), false);
+});
+ok('un MusicEvent con oferta trae también el precio', () => {
+  const p = parseHtml(CONCERT, 'https://entradas.example.com/pignoise');
+  assert.strictEqual(parsePrice(p.priceRaw, p.currency).value, 28);
+  assert.strictEqual(p.note, '19 nov 2026 · Sala Razzmatazz, Barcelona');
+});
+ok('la pantalla intermedia de Incapsula es un muro, no una ficha llamada "Vivaticket"', () => {
+  const { isWall, titleFromSlug } = require('../lib/extract');
+  const p = parseHtml(INCAPSULA, 'https://www.vivaticket.com/es/ticket/wicked-el-musical/1735');
+  assert.strictEqual(isWall(p), true);
+  assert.strictEqual(titleFromSlug('https://www.vivaticket.com/es/ticket/wicked-el-musical/1735'), 'Wicked el musical');
+});
 ok('las páginas de error del proxy del desbloqueador no pasan por fichas', () => {
   const { looksProxyError } = require('../lib/extract');
   assert.strictEqual(looksProxyError('<html><head><title>This site can’t be reached</title></head><body>ERR_CONNECTION_RESET</body></html>'), true);

@@ -555,7 +555,7 @@ th{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b8f9a}.ok
 <h1>Banco de pruebas</h1>
 <div class="sub">Estado: <b>${esc(state.status)}</b> · ${state.done || 0}/${state.total || 0} enlaces${state.startedAt ? ' · ' + new Date(state.startedAt).toLocaleString('es-ES') : ''}</div>
 ${s ? `<div class="kpis">
-  <div class="kpi"><b>${pct(s.pctOk)}</b><span>captura completa</span></div>
+  <div class="kpi"><b>${pct(s.pctOk)}</b><span>captura completa · objetivo ${s.target || 92}% ${s.onTarget ? '✓' : '✗'}</span></div>
   <div class="kpi"><b>${pct(s.pctTitle)}</b><span>nombre</span></div>
   <div class="kpi"><b>${pct(s.pctPrice)}</b><span>precio</span></div>
   <div class="kpi"><b>${pct(s.pctImage)}</b><span>foto</span></div>
@@ -621,6 +621,12 @@ app.use(express.static(PUBLIC_DIR, {
   maxAge: '7d',
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('index.html') || filePath.endsWith('sw.js')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+    // El Atajo de iPhone firmado: Safari lo descarga y la app Atajos lo abre.
+    if (filePath.endsWith('.shortcut')) {
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(path.basename(filePath))}`);
       res.setHeader('Cache-Control', 'no-cache');
     }
   },

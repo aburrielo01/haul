@@ -1,5 +1,8 @@
 # Banco de pruebas · estado (26 oct 2026, v4.0)
 
+**Objetivo acordado: ≥ 92 %** (nombre, precio y foto correctos). El informe lo
+enseña junto al porcentaje y marca ✓ o ✗. Última medición: 94 %.
+
 ## Primera pasada en Render con la 4.0 (26 oct): 86/100
 
 El desbloqueador funciona (42 fichas leídas a través de él; 4 aciertos de 14
@@ -16,8 +19,19 @@ intentos en los fallos, ningún rechazo por saldo). De los 14 fallos:
 | Depop: Bright Data `policy_20050` | E069, E070 | requiere KYC de la cuenta; no se reintenta en balde |
 | About You sirve la portada a visitas automáticas; AliExpress E059 a veces sirve la página sin producto | E056, E059 | sin arreglo de código |
 
-Con esos arreglos desplegados, el techo realista en Render queda en **94–96/100**
-(fallan seguro Depop ×2 y, según el día, About You, AliExpress E059 y Shein).
+**Segunda pasada en Render con los arreglos (26 oct): 94/100.** Los ocho de la
+tabla con arreglo pasan. Quedan seis:
+
+- **Shein ×2**: el desbloqueador no resuelve su verificación ni con 150 s. Solo
+  un navegador remoto con sesión real (Scraping Browser).
+- **About You E056**: sirve la portada a cualquier visita automática, también al
+  desbloqueador. Feed de AWIN o navegador remoto.
+- **AliExpress E059**: el desbloqueador recibe la página sin producto dos veces
+  seguidas; E060 sí se lee. Probablemente la ficha pide sesión.
+- **Depop ×2**: `policy_20050` hasta que la cuenta de Bright Data pase el KYC.
+  Con KYC, el lector ya está preparado (nombre, precio y foto salen bien).
+
+El 94 % es el techo con la cuenta actual; con el KYC de Bright Data subiría a 96.
 
 ## Qué se hizo el 25 de octubre
 
@@ -49,7 +63,7 @@ de los 47 enlaces que fallaban. Conclusiones:
 |---|---|---|
 | Local, sin desbloqueador (25 oct) | **66/100** | 29 muros anti-bot (Inditex ×10, H&M, Adidas, New Balance, Decathlon, Etsy, Zara Home, Maisons du Monde, Leroy Merlin, Fnac y, a ratos, Levi's E031), Shein ×2, Temu ×2, AliExpress E059 |
 | Render con desbloqueador, antes de los arreglos del 26 oct | **86/100** | los 14 de la tabla de arriba |
-| Render con desbloqueador y los arreglos del 26 oct (estimación) | **94–96/100** | Depop ×2 (KYC), About You, AliExpress E059 y Shein según el día |
+| Render con desbloqueador y los arreglos del 26 oct (medido) | **94/100** | Shein ×2, About You, AliExpress E059 (sin arreglo de código) y Depop ×2 (KYC de Bright Data) |
 | Render con el desbloqueador **sin cupo** | ≈ 66/100 | los mismos muros que en local |
 
 Los 29 muros locales son exactamente las tiendas que en producción pasan por el
@@ -94,4 +108,6 @@ es casi siempre la hoja: abre la ficha, actualiza `price`, apunta el anterior en
 E006, E009, E010, E015, E059, E061, E062) son las que nadie ha vuelto a mirar.
 
 Histórico: 62,6 % → 73 % → 81 % → 89 % (v3.10, 18 oct, en Render con
-desbloqueador) → hoja refrescada y 66 % local sin desbloqueador (v4.0, 25 oct).
+desbloqueador) → hoja refrescada y 66 % local sin desbloqueador (v4.0, 25 oct)
+→ 86 % en Render con la hoja nueva → **94 %** con los adaptadores de Snipes,
+Temu y Zara Home y los reintentos del desbloqueador (v4.0, 26 oct).
