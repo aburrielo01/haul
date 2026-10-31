@@ -85,7 +85,10 @@ cada pieza y te lo cuenta. Las cuatro cosas que el README de la 3.x dejaba como
 - `extractFromUrl(url, { cheap: true })` para lecturas sin coste.
 - `/api/health` cuenta cómo va la vigilancia y si los avisos están activos.
 - Pruebas nuevas: `node test/watch.js` y más casos en `npm test`.
-- Dependencia nueva: `web-push`.
+- Dependencia nueva: `web-push`. `better-sqlite3` sube a 12.x: la imagen de
+  Playwright pasó a Node 24 y la 11.x no traía binario para él, así que la
+  build de Render caía en `node-gyp` sin `make`. El Dockerfile instala
+  además `python3 make g++` por si vuelve a faltar un binario.
 
 ## 3.x · septiembre–octubre de 2026
 
