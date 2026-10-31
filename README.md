@@ -68,11 +68,14 @@ compartir del sistema; en iPhone, que todavía no lo admite, está el botón
 *Pegar imagen copiada* dentro de la pestaña Captura.
 
 **El Atajo de iPhone.** `public/atajo/anadir-a-haul.shortcut` es un Atajo firmado (nombre sin «ñ»: Linux distingue las dos formas Unicode de la letra y GitHub la subió descompuesta)
-(se instala con un toque desde Perfil → *Haul en el menú Compartir*) con tres
-acciones: *Obtener URLs de la entrada* → *Texto* `https://…/#add=<URLs>` → *Abrir
-URL*. La primera acción es la que importa: una página de Safari o el texto de una
-app se convierten en su enlace; sin ella, iOS manda el título de la página y Haul
-recibe "ZARA España" en vez de la ficha. Si cambias de dominio, regenera el fichero:
+(se instala con un toque desde Perfil → *Haul en el menú Compartir*) con cinco
+acciones: *Obtener texto de la entrada* → *Texto* (la entrada como URL + el
+texto) → *Codificar URL* → *Texto* `https://…/#add=<codificado>` → *Abrir URL*.
+Haul saca el primer enlace de lo que llega y usa el nombre que venía en el texto.
+No usa *Obtener URLs de la entrada*: las apps de Amazon y Zalando entregan un
+texto y una URL, y con esa entrada la acción devuelve vacío (comprobado con el
+Atajo de diagnóstico). Los enlaces cortos de las apps (`amzn.eu/d/…`) los expande
+el servidor antes de elegir adaptador. Si cambias de dominio, regenera el fichero:
 
 ```bash
 python3 scripts/make-shortcut.py https://tu-dominio.com atajo.shortcut

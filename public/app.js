@@ -622,11 +622,36 @@ function parseShared(raw) {
     return inner ? parseShared(safeDecode(inner)) : { url: '', title: '' };
   }
   let before = text.slice(0, m.index).trim();
-  // "… en Zalando: Nombre" / "Check out … on Amazon: Nombre" → lo que va tras los dos puntos
-  if (before.includes(':')) before = before.slice(before.lastIndexOf(':') + 1).trim();
+  // Si el enlace va el primero (el Atajo pone «entrada como URL» en una línea),
+  // el nombre está entre ese enlace y el siguiente: "https://… El Hombre Iluminado https://…"
+  if (!before) {
+    const rest = text.slice(m.index + m[0].length);
+    const next = rest.search(/https?:\/\//i);
+    before = (next >= 0 ? rest.slice(0, next) : rest).trim();
+  }
+  // "… en Zalando: Nombre" / "Check out … on Amazon: Nombre" → lo que va tras los
+  // dos puntos. Solo si delante hay ese "en Tienda": un título como "El Hombre
+  // Iluminado: Una novela del Cosmere" lleva sus propios dos puntos.
+  const i = before.lastIndexOf(':');
+  if (i >= 0) {
+    const head = before.slice(0, i).trim();
+    const sharePrefix = /\b(?:en|on|at|de|from|auf|bei|sur|chez)\s+[A-ZÁÉÍÓÚÑ][\w&'.-]*(?:\s[A-ZÁÉÍÓÚÑ][\w&'.-]*)?$/.test(head)
+      || (head.length <= 40 && /\b(?:mira|check|look|art[ií]culos|encontrado|found|comparto|sharing|échale)\b/i.test(head));
+    if (sharePrefix) before = before.slice(i + 1).trim();
+  }
   before = before.replace(/^[«"“']|[»"”'\-–—|:]+$/g, '').trim();
   const title = before.length >= 4 && before.length <= 160 && !/^https?:/i.test(before) ? before : '';
   return { url, title };
+}
+
+/** Si la tienda solo devuelve su propio nombre ("Amazon.es", "Producto"), vale más el del texto compartido. */
+function betterTitle(extracted, shop) {
+  const hint = session.hint && session.hint.title;
+  if (!hint) return extracted || '';
+  const t = String(extracted || '').trim();
+  const weak = !t || /^producto$/i.test(t) || /^[\w-]+\.[a-z]{2,}$/i.test(t)
+    || (shop && t.toLowerCase() === String(shop).toLowerCase());
+  return weak ? hint : t;
 }
 
 function openAdd(prefillUrl, { photo = null } = {}) {
@@ -770,7 +795,7 @@ async function readUrl() {
   $('#addPreview').classList.add('hidden');
   try {
     const data = await api('/extract', { method: 'POST', body: { url } });
-    showPreview({ ...data, source: 'url', url: data.url || url });
+    showPreview({ ...data, title: betterTitle(data.title, data.shop), source: 'url', url: data.url || url });
     if (!data.image && session.sharedPhoto) attachPhoto(session.sharedPhoto);
   } catch (err) {
     // Aunque la tienda nos cierre la puerta, del propio enlace se saca

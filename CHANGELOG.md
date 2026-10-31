@@ -16,6 +16,17 @@ Dos arreglos del despliegue de la 4.0.
 - Si el Atajo abre Haul sin enlace (hay apps que no se lo pasan), se abre la
   hoja de añadir con **Pegar** y un aviso que dice qué copiar, en vez de un
   aviso que pedía reinstalar el Atajo.
+- El Atajo ya no usa *Obtener URLs de la entrada*: con lo que entregan las apps
+  de Amazon y Zalando (un texto con el enlace dentro y una URL) esa acción
+  devolvía vacío. Ahora recoge el texto, lo codifica y lo manda entero; Haul
+  saca el enlace y aprovecha el nombre. La receta a mano de la guía cambia igual.
+- Los enlaces cortos que comparten las apps (`amzn.eu/d/…`, `a.co`, AliExpress,
+  OneLink…) se expanden en el servidor antes de elegir adaptador: hasta ahora un
+  enlace de la app de Amazon se leía sin el adaptador de Amazon.
+- El nombre que viene en el texto compartido gana cuando la tienda solo
+  devuelve el suyo ("Amazon.es") o nada. Y los dos puntos de un título ("El
+  Hombre Iluminado: Una novela del Cosmere") ya no se confunden con el patrón
+  "… en Zalando: Nombre": solo se recorta cuando delante hay un "en Tienda".
 - `public/atajo/diagnostico.shortcut` (`scripts/make-diagnostico.py`): Atajo
   que, al compartir desde cualquier app, enseña y copia qué recibe (tipo,
   texto, enlaces). Sirve para saber qué entrega cada app al menú Compartir.

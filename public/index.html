@@ -389,14 +389,15 @@
       <details class="steps__manual">
         <summary class="linkbtn">Prefiero montarlo a mano</summary>
         <ol class="steps" style="margin-top:10px">
-          <li><b>Copia la dirección de Haul</b> con el botón de abajo. La necesitas en el paso 5.
+          <li><b>Copia la dirección de Haul</b> con el botón de abajo. La necesitas en el paso 6.
             <button class="btn btn--sm" style="margin-top:8px" id="btnCopyHaulAddr">Copiar dirección</button></li>
           <li>Abre la app <b>Atajos</b>, toca <b>+</b> y ponle de nombre <b>Añadir a Haul</b>.</li>
           <li>Toca <b>ⓘ</b> y activa <b>Mostrar en la hoja de compartir</b>.</li>
-          <li>Añade la acción <b>Obtener URLs de la entrada</b>. Es la que convierte una página de Safari o el texto de una app en su enlace.</li>
-          <li>Añade la acción <b>Texto</b>: pega la dirección y, justo detrás, toca el chip <b>URLs</b> (la salida del paso anterior):
-            <code class="steps__code">https://haul-o6sv.onrender.com/#add=<span class="chip">URLs</span></code></li>
-          <li>Añade <b>Abrir URL</b>. Se conecta sola con el texto.</li>
+          <li>Añade la acción <b>Obtener texto de la entrada</b>. Las apps de tienda comparten un texto con el nombre y el enlace dentro; esta acción lo recoge entero. (No uses <i>Obtener URLs de la entrada</i>: con lo que mandan Amazon o Zalando devuelve vacío.)</li>
+          <li>Añade la acción <b>Codificar URL</b>. Se conecta sola con el texto anterior y lo deja listo para ir dentro de una dirección.</li>
+          <li>Añade la acción <b>Texto</b>: pega la dirección y, justo detrás, toca el chip <b>Texto codificado</b> (la salida del paso anterior):
+            <code class="steps__code">https://haul-o6sv.onrender.com/#add=<span class="chip">Texto codificado</span></code></li>
+          <li>Añade <b>Abrir URL</b>. Se conecta sola con el texto. Haul saca el enlace y el nombre de lo que llega.</li>
         </ol>
       </details>
     </div>

@@ -27,6 +27,9 @@ piezas = [
     ("\nURLs: ", {"OutputUUID": u_urls, "OutputName": "URLs", "Type": "ActionOutput"}),
     ("\nTexto: ", {"OutputUUID": u_texto, "OutputName": "Texto", "Type": "ActionOutput"}),
     ("\nEntrada tal cual: ", {"Type": "ExtensionInput"}),
+    ("\nEntrada como URL: ", {"Type": "ExtensionInput", "Aggrandizements": [
+        {"Type": "WFCoercionVariableAggrandizement", "CoercionItemClass": "WFURLContentItem"},
+    ]}),
 ]
 string, attachments = "", {}
 for literal, att in piezas:
