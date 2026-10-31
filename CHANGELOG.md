@@ -13,6 +13,12 @@ Dos arreglos del despliegue de la 4.0.
   forma descompuesta y la ruta ya no lo encontraba. El fichero pasa a
   `public/atajo/anadir-a-haul.shortcut` y el servidor acepta cualquier
   escritura del nombre; se descarga igualmente como «Añadir a Haul».
+- Si el Atajo abre Haul sin enlace (hay apps que no se lo pasan), se abre la
+  hoja de añadir con **Pegar** y un aviso que dice qué copiar, en vez de un
+  aviso que pedía reinstalar el Atajo.
+- `public/atajo/diagnostico.shortcut` (`scripts/make-diagnostico.py`): Atajo
+  que, al compartir desde cualquier app, enseña y copia qué recibe (tipo,
+  texto, enlaces). Sirve para saber qué entrega cada app al menú Compartir.
 
 ## 4.0.0 · 24 de octubre de 2026
 

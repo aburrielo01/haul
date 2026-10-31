@@ -79,6 +79,15 @@ python3 scripts/make-shortcut.py https://tu-dominio.com atajo.shortcut
 shortcuts sign --mode anyone --input atajo.shortcut --output public/atajo/anadir-a-haul.shortcut   # en un Mac
 ```
 
+Para ver qué entrega una app al menú Compartir (hay apps que solo pasan un
+título), `scripts/make-diagnostico.py` fabrica un Atajo que lo enseña y lo
+copia al portapapeles; firmado, se sirve en `/atajo/diagnostico.shortcut`.
+
+```bash
+python3 scripts/make-diagnostico.py diag.shortcut
+shortcuts sign --mode anyone --input diag.shortcut --output public/atajo/diagnostico.shortcut
+```
+
 ## Ponerlo en marcha
 
 ```bash

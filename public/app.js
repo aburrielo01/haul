@@ -2350,12 +2350,14 @@ async function route({ push = true } = {}) {
   // El Atajo de iPhone abre /#add=<enlace>: va tras la almohadilla para que
   // los parámetros del enlace de la tienda (?size=35&color=…) lleguen enteros.
   let shortcutWithoutLink = false;
+  let shortcutEmpty = false;
   if (!incoming.text && /^#add=?/.test(location.hash)) {
     const text = safeDecode(location.hash.replace(/^#add=?/, ''));
     incoming = { file: null, text };
     if (!text.trim()) {
-      history.replaceState({}, '', '/');
-      toast('El Atajo ha llegado vacío: instala el Atajo nuevo desde Perfil → Haul en el menú Compartir');
+      // Algunas apps no le pasan el enlace al Atajo, solo un título o nada:
+      // se abre la hoja de añadir con "Pegar" para que el enlace copiado entre.
+      shortcutEmpty = true;
     } else if (!/https?:\/\//i.test(text)) {
       // El Atajo antiguo mandaba el título de la página ("ZARA España") en vez
       // del enlace: con eso no hay ficha que leer. Mejor explicarlo que enseñar
@@ -2384,6 +2386,16 @@ async function route({ push = true } = {}) {
     setMobileTab('ios');
     openSheet('sheet-mobile');
     toast(`El Atajo ha mandado «${incoming.text.trim().slice(0, 40)}» en vez del enlace. Instala el Atajo nuevo: este sí lo saca.`);
+    return;
+  }
+
+  if (shortcutEmpty) {
+    history.replaceState({}, '', '/');
+    if (store.data.lists.length) {
+      if (!session.list) await openList(store.data.lists[0].slug, { push: false });
+      openAdd('');
+    }
+    toast('El Atajo ha llegado sin enlace: esa app no se lo pasa. Copia el enlace en la app (Compartir → Copiar) y pulsa Pegar.');
     return;
   }
 
