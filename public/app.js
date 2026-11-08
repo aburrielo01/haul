@@ -1084,9 +1084,27 @@ async function handleShot(file) {
   } catch { /* seguimos con el OCR */ }
   fill.style.width = '45%';
 
-  // 2) OCR para sacar texto, precio y posible enlace
-  let guess = { url: '', priceText: '', title: '' };
+  // 2) Claude lee la captura en el servidor (si está activado). Si no lo está
+  //    o falla, el OCR del móvil sigue siendo el plan B.
+  let guess = { url: '', priceText: '', title: '', shop: '', note: '' };
+  let readByAi = false;
   try {
+    setLoading(true, 'Leyendo la captura…');
+    const ai = await api('/shot', { method: 'POST', body: { image: shot.dataUrl, hint: { title: keep.title || '', shop: keep.shop || '' } } });
+    if (ai && (ai.title || ai.priceText)) {
+      readByAi = true;
+      guess = {
+        url: ai.url || '', priceText: ai.priceText || '', title: ai.title || '', shop: ai.shop || '',
+        note: [ai.color, ai.size].filter(Boolean).join(' · '),
+      };
+    }
+  } catch (err) {
+    if (err.code !== 'AI_OFF') console.warn('captura con IA', err.message);
+  }
+  fill.style.width = readByAi ? '90%' : '55%';
+
+  // 2b) OCR en el móvil para sacar texto, precio y posible enlace
+  if (!readByAi) try {
     setLoading(true, 'Reconociendo el texto…');
     await loadScript(CDN.tesseract);
     const { data } = await window.Tesseract.recognize(shot.dataUrl, 'spa+eng', {
@@ -1112,12 +1130,13 @@ async function handleShot(file) {
   showPreview({
     title: keep.title || guess.title,
     priceText: keep.price || guess.priceText,
-    shop: keep.shop || '',
+    shop: keep.shop || guess.shop || '',
     image: shot.dataUrl,
     url: keep.url || guess.url,
+    note: guess.note || '',
     source: 'shot',
   });
-  toast(guess.title || guess.priceText ? 'Datos leídos de la captura' : 'Revisa los datos y guarda');
+  toast(readByAi ? 'Captura leída ✦ revisa y guarda' : guess.title || guess.priceText ? 'Datos leídos de la captura' : 'Revisa los datos y guarda');
 }
 
 /* ------------------------------------------------------ detalle producto */
@@ -1134,7 +1153,8 @@ function openItem(id) {
   $('#itemNote').textContent = item.note || '';
   $('#itemNote').classList.toggle('hidden', !item.note);
   const link = $('#itemLink');
-  link.href = item.url || '#';
+  // con enlace de afiliado (AWIN) la compra cuenta para Haul; el destino es el mismo
+  link.href = item.affiliateUrl || item.url || '#';
   link.classList.toggle('hidden', !item.url);
   $('#btnToggleBought').textContent = item.bought ? '↺ Aún no' : '✓ Comprado';
   const isOwner = session.list.role === 'owner';

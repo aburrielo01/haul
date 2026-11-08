@@ -1,5 +1,64 @@
 # Cambios
 
+## 4.1.0 · en curso (7 de noviembre de 2026)
+
+### Banco de pruebas: consistencia, no una foto
+
+- El banco guarda historial: las últimas cinco lecturas de cada enlace y las
+  últimas diez pasadas completas (`bench:history`). El informe lleva una
+  columna **hist.** con las marcas (✓✗✓…) y una etiqueta por enlace: estable,
+  inestable, falla o sin datos; y una línea que responde a la pregunta de
+  verdad: ¿las tres últimas pasadas completas están en objetivo?
+- `/api/bench/run` admite `concurrency=2` (tope) para acortar las pasadas.
+- `npm run test:bench` → `node test/bench.js` (historial incluido).
+
+### Claude lee las capturas y rescata fichas
+
+- `lib/ai.js`, con el SDK oficial de Anthropic: `POST /api/shot` recibe la
+  captura reducida que ya hacía el móvil y devuelve nombre, precio actual,
+  moneda, tienda, color y talla con salida estructurada (JSON validado). El
+  OCR del móvil (Tesseract) queda como plan B si no hay clave o la lectura
+  falla. Sin `ANTHROPIC_API_KEY` todo sigue exactamente como antes.
+- Rescate de fichas: cuando la cascada de lectura acaba sin nombre o sin
+  precio pero hay una página real (no un muro), se pide a Claude lo que falta
+  a partir del texto visible; la ficha sale como `parcial+ia`. No se usa en
+  el modo barato del vigilante.
+- Coste bajo control: modelo por variable (`AI_MODEL`, por defecto
+  `claude-haiku-5-5`), tope diario (`AI_DAILY_LIMIT`, 300), caché por huella
+  de imagen (7 días) y por enlace (1 día), y gasto estimado del día en
+  `/api/health` → `ai`.
+- Pruebas: `node test/ai.js` (con cliente simulado; con clave y capturas en
+  `test/shots/`, también lectura real). Dependencias nuevas:
+  `@anthropic-ai/sdk` y `zod`.
+
+### AWIN, en segundo plano y por tienda
+
+- `lib/awin.js`, detrás de `AWIN_PUBLISHER_ID`, `AWIN_TOKEN` y
+  `AWIN_ADVERTISERS` (dominio=idAnunciante:idioma, uno por tienda aprobada).
+  Sin ellas no hace nada.
+- Enlaces de afiliado: el vigilante pide por lotes de 100 el enlace de
+  seguimiento de cada pieza de una tienda AWIN y lo guarda en la pieza
+  (`affiliate_url`); la ficha abre la tienda por ese enlace. Si el anunciante
+  no permite deep links, se anota y no se insiste en un mes.
+- Precios desde el feed: una vez al día, por anunciante con piezas, se lee su
+  feed JSON Lines *en streaming* y solo se guardan las filas cuyo enlace está
+  en HAUL; esas piezas se actualizan por el mismo camino que el vigilante
+  (comparación, historial, avisos de bajada), con `mode: 'awin'`. Sin stock,
+  el precio no se toca. Respeta el límite de 5 peticiones por minuto.
+- `/api/health` → `awin` con enlaces generados o denegados y la última pasada
+  de feeds. Pruebas: `node test/awin.js` (API simulada).
+
+### `.env` en local
+
+- El servidor y las pruebas leen un `.env` en la raíz si existe (`lib/env.js`,
+  sin dependencias; no pisa variables ya definidas). `.env.example` trae todas
+  las variables comentadas. `.env` está en `.gitignore`.
+
+### Guía del iPhone
+
+- El camino sin instalar nada (Compartir → Copiar, abrir Haul → Añadir →
+  Pegar) aparece el primero; el Atajo queda como opción de dos toques.
+
 ## 4.0.1 · 31 de octubre de 2026
 
 Dos arreglos del despliegue de la 4.0.
@@ -16,10 +75,12 @@ Dos arreglos del despliegue de la 4.0.
 - Si el Atajo abre Haul sin enlace (hay apps que no se lo pasan), se abre la
   hoja de añadir con **Pegar** y un aviso que dice qué copiar, en vez de un
   aviso que pedía reinstalar el Atajo.
-- El Atajo ya no usa *Obtener URLs de la entrada*: con lo que entregan las apps
-  de Amazon y Zalando (un texto con el enlace dentro y una URL) esa acción
-  devolvía vacío. Ahora recoge el texto, lo codifica y lo manda entero; Haul
-  saca el enlace y aprovecha el nombre. La receta a mano de la guía cambia igual.
+- El Atajo ya no depende de *Obtener URLs de la entrada*: con lo que entregan
+  las apps de Amazon y Zalando (un texto con el enlace dentro y una URL) esa
+  acción devuelve vacío. Ahora recoge el texto, lo codifica y lo manda entero;
+  Haul saca el enlace y aprovecha el nombre. Tampoco convierte la entrada a URL:
+  con un texto que no es enlace, Atajos falla ("no ha podido convertir Texto en
+  URL") y se para. La receta a mano de la guía cambia igual.
 - Los enlaces cortos que comparten las apps (`amzn.eu/d/…`, `a.co`, AliExpress,
   OneLink…) se expanden en el servidor antes de elegir adaptador: hasta ahora un
   enlace de la app de Amazon se leía sin el adaptador de Amazon.

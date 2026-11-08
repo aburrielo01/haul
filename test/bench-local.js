@@ -14,6 +14,7 @@
  */
 const path = require('path');
 const fs = require('fs');
+require('../lib/env').load(); // BRIGHTDATA_API_KEY y demás, si están en .env
 const extract = require('../lib/extract');
 const bench = require('../lib/bench');
 

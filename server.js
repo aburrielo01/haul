@@ -6,6 +6,9 @@
  * un enlace compartido funciona en cualquier dispositivo y sin cuenta.
  */
 
+// `.env` de la raíz (si existe) antes que nada: hay módulos que leen variables al cargar
+require('./lib/env').load();
+
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -14,6 +17,8 @@ const extract = require('./lib/extract');
 const bench = require('./lib/bench');
 const watch = require('./lib/watch');
 const push = require('./lib/push');
+const ai = require('./lib/ai');
+const awin = require('./lib/awin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -107,6 +112,8 @@ function publicItem(it) {
     lowPrice: num(it.low_price),
     priceChangedAt: num(it.price_changed_at),
     checkedAt: num(it.checked_at),
+    // enlace de afiliado (v4.1, AWIN); vacío si la tienda no está en AWIN o no lo permite
+    affiliateUrl: it.affiliate_url || '',
   };
 }
 
@@ -139,6 +146,8 @@ app.get('/api/health', async (_req, res) => res.json({
   unlockerUsage: extract.unlockerStats(),
   watch: watch.stats(),
   push: push.enabled(),
+  ai: ai.stats(),
+  awin: awin.stats(),
 }));
 
 // Crear lista
@@ -508,7 +517,11 @@ app.get('/api/bench/run', async (req, res) => {
   if (req.query.limit) filter.limit = Math.max(1, Number(req.query.limit) || 0);
   if (req.query.ids) filter.ids = String(req.query.ids).split(',').map((x) => x.trim()).filter(Boolean);
   try {
-    const out = await bench.run({ db, extract: extract.extractFromUrl, filter, fresh: req.query.fresh === '1' });
+    const { finished, ...out } = await bench.run({
+      db, extract: extract.extractFromUrl, filter,
+      fresh: req.query.fresh === '1',
+      concurrency: req.query.concurrency ? Number(req.query.concurrency) : 1, // tope 2 en lib/bench
+    });
     res.json({ ok: true, ...out });
   } catch (err) {
     fail(res, 500, err.message);
@@ -537,7 +550,8 @@ function renderBenchHtml(state) {
       <td class="small">${esc(g.got ? g.got.priceText : '')}${g.priceDiff ? ` <i>(±${g.priceDiff})</i>` : ''}</td>
       <td class="small">${esc(r.expected.title)} · ${esc(r.expected.price)}${r.expected.verified ? ` <i title="hoja comprobada a mano">(${esc(r.expected.verified)})</i>` : ''}</td>
       <td class="small">${Math.round(r.ms / 100) / 10}s</td>
-    </tr>${r.trail && r.trail.length ? `<tr><td></td><td colspan="9" class="small trail">${r.trail.map((t) =>
+      <td class="hist ${esc((r.history || {}).label || '')}" title="últimas lecturas, la más reciente a la derecha">${esc((r.history || {}).marks || '')}<br>${esc((r.history || {}).label || '')}</td>
+    </tr>${r.trail && r.trail.length ? `<tr><td></td><td colspan="10" class="small trail">${r.trail.map((t) =>
       esc(`${t.step}: ${t.result || ''}${t.status ? ' ' + t.status : ''}${t.error ? ' · ' + t.error : ''}${t.title ? ' · «' + t.title + '»' : ''}${t.price ? ' · ' + t.price : ''}`)).join(' → ')}</td></tr>` : ''}`;
   }).join('');
   const shops = s ? s.byShop.map((x) => `<tr><td>${esc(x.shop)}</td><td>${x.ok}/${x.total}</td></tr>`).join('') : '';
@@ -551,6 +565,7 @@ table{border-collapse:collapse;width:100%;font-size:13px;background:#fff}th,td{b
 th{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b8f9a}.ok{color:#1a8f3a;font-weight:700}.ko{color:#d6362a;font-weight:700}.small{font-size:12px;color:#4a4f5a;max-width:260px}
 .trail{color:#8b8f9a;font-family:ui-monospace,monospace;font-size:11px;max-width:none;border-bottom:1px dashed #e2e1e8}
 .two{display:grid;grid-template-columns:1fr 3fr;gap:24px;align-items:start}@media(max-width:800px){.two{grid-template-columns:1fr}}
+.hist{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.08em;white-space:nowrap}.hist.estable{color:#1a8f3a}.hist.inestable{color:#c77a00}.hist.falla{color:#d6362a}.hist.sin-datos{color:#8b8f9a}
 </style>
 <h1>Banco de pruebas</h1>
 <div class="sub">Estado: <b>${esc(state.status)}</b> · ${state.done || 0}/${state.total || 0} enlaces${state.startedAt ? ' · ' + new Date(state.startedAt).toLocaleString('es-ES') : ''}</div>
@@ -562,12 +577,49 @@ ${s ? `<div class="kpis">
   <div class="kpi"><b>${s.failed}</b><span>errores</span></div>
 </div>
 ${s.unlocker && s.unlocker.tried ? `<p class="sub">Desbloqueador en los fallos: ${s.unlocker.tried} intentos · ${s.unlocker.ok} con ficha · ${s.unlocker.rejected} rechazados · ${s.unlocker.wall} muro · ${s.unlocker.empty} vacíos · ${s.unlocker.timeout} sin respuesta · ${s.unlocker.noBudget} sin cupo${s.unlocker.ok === 0 && s.unlocker.tried >= 5 ? ' — <b>ninguno acierta: revisa saldo y verificación de la cuenta de Bright Data</b>' : ''}</p>` : ''}
+${state.consistency ? renderConsistency(state.consistency) : ''}
 ${s.truth ? `<p class="sub">Hoja de verdad: ${s.truth.verified}/${s.total} filas comprobadas a mano${s.truth.newest ? `, la más reciente el ${esc(s.truth.newest)}` : ''}${s.truth.oldest && s.truth.oldest !== s.truth.newest ? ` y la más antigua el ${esc(s.truth.oldest)}` : ''}. Los precios cambian: un fallo de precio con nombre y foto correctos suele ser la hoja, no el lector.</p>` : ''}` : '<p>Todavía no hay resultados.</p>'}
 <div class="two">
   <div><h3>Por tienda</h3><table><tr><th>tienda</th><th>ok</th></tr>${shops}</table></div>
-  <div><h3>Detalle</h3><table><tr><th>id</th><th>tienda</th><th>nombre</th><th>precio</th><th>foto</th><th>vía</th><th>leído</th><th>precio leído</th><th>esperado</th><th>t</th></tr>${rows}</table></div>
+  <div><h3>Detalle</h3><table><tr><th>id</th><th>tienda</th><th>nombre</th><th>precio</th><th>foto</th><th>vía</th><th>leído</th><th>precio leído</th><th>esperado</th><th>t</th><th>hist.</th></tr>${rows}</table></div>
 </div>`;
 }
+
+/** "¿Está al 92 % de forma consistente?": las últimas pasadas completas y los enlaces que bailan. */
+function renderConsistency(c) {
+  const runs = (c.runs || []).map((r) => `${r.pctOk}%${r.onTarget ? '' : ' ✗'} (${new Date(r.finishedAt).toLocaleDateString('es-ES')})`).join(' · ');
+  const verdict = !c.enough
+    ? `faltan pasadas completas: ${(c.runs || []).length}/${bench.CONSISTENCY_RUNS}`
+    : c.consistent ? `<b>consistente</b>: las ${bench.CONSISTENCY_RUNS} últimas pasadas en objetivo` : `<b>no consistente</b>: alguna de las ${bench.CONSISTENCY_RUNS} últimas pasadas por debajo del objetivo`;
+  const k = c.counts || {};
+  return `<p class="sub">Pasadas completas: ${runs || 'ninguna todavía'} → ${verdict}. Enlaces: ${k.estable || 0} estables · ${k.inestable || 0} inestables${c.unstable && c.unstable.length ? ` (${esc(c.unstable.join(' '))})` : ''} · ${k.falla || 0} fallan siempre${c.failing && c.failing.length ? ` (${esc(c.failing.join(' '))})` : ''} · ${k['sin-datos'] || 0} sin datos aún.</p>`;
+}
+
+/**
+ * Leer una captura de pantalla con Claude. El móvil manda la imagen ya reducida
+ * (data URL). Sin clave en el servidor responde 404 AI_OFF y el móvil sigue con
+ * su OCR; con clave devuelve nombre, precio, tienda, color y talla.
+ */
+app.post('/api/shot', limitExtract, async (req, res) => {
+  if (!ai.enabled()) return res.status(404).json({ ok: false, code: 'AI_OFF', message: 'Lectura con IA desactivada' });
+  const image = String(req.body?.image || '');
+  if (!image.startsWith('data:image/')) return fail(res, 400, 'Falta la captura');
+  const hint = req.body?.hint && typeof req.body.hint === 'object' ? req.body.hint : {};
+  try {
+    const got = await ai.readShot(image, { hint: { title: String(hint.title || '').slice(0, 160), shop: String(hint.shop || '').slice(0, 60) } });
+    if (!got) return res.status(502).json({ ok: false, code: 'AI_FAILED', message: 'No hemos podido leer la captura' });
+    const price = got.price ? extract.parsePrice(String(got.price), got.currency || 'EUR') : null;
+    res.json({
+      ok: true,
+      title: got.title, shop: got.shop, url: got.url, color: got.color, size: got.size,
+      priceText: price ? price.text : '', priceValue: price ? price.value : null, currency: price ? price.currency : '',
+      confidence: got.confidence, model: got.model,
+    });
+  } catch (err) {
+    console.error('shot', err && err.message);
+    res.status(502).json({ ok: false, code: 'AI_FAILED', message: 'No hemos podido leer la captura' });
+  }
+});
 
 // Buscar por código de barras / QR
 app.get('/api/barcode/:code', limitExtract, async (req, res) => {
@@ -734,6 +786,7 @@ app.get('*', (_req, res) => res.sendFile(INDEX_FILE));
 
 db.init()
   .then((info) => {
+    ai.attachDb(db);
     const pushReady = push.setup();
     const notify = (ev) => push.notifyDrop(db, { ...ev, formatPrice: extract.formatPrice });
     const watching = watch.start({ db, extract: extract.extractFromUrl, notify, formatPrice: extract.formatPrice });
@@ -741,6 +794,8 @@ db.init()
       console.log(
         `Haul escuchando en http://0.0.0.0:${PORT} · base de datos: ${info.driver}`
         + ` · vigilancia de precios: ${watching ? 'activa' : 'apagada'} · avisos push: ${pushReady ? 'activos' : 'sin claves'}`
+        + ` · lectura con IA: ${ai.enabled() ? ai.MODEL : 'sin clave'}`
+        + ` · AWIN: ${awin.enabled() ? awin.ADVERTISERS.length + ' tiendas' : 'sin configurar'}`
       );
     });
   })

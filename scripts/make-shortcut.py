@@ -1,12 +1,16 @@
 """Fabrica el Atajo "Añadir a Haul" (sin firmar) en formato .shortcut (plist).
 
-Cinco acciones:
-  1. Obtener texto de la entrada   (lo que comparte la app: título + enlace)
-  2. Texto: «texto» + salto + «entrada como URL»   (el texto cubre las apps, que
-     mandan el enlace dentro; la coerción a URL cubre las páginas de Safari)
-  3. Codificar URL                 (para que título, espacios y saltos quepan)
-  4. Texto: https://haul-o6sv.onrender.com/#add=<codificado>
-  5. Abrir URL                     (Haul saca el primer enlace y usa el título)
+Seis acciones:
+  1. Obtener texto de la entrada   (lo que comparte la app: título + enlace dentro)
+  2. Obtener URLs de la entrada    (vacío con las apps; con una página de Safari, su enlace)
+  3. Texto: «texto» + salto + «URLs» + salto + «entrada de atajo»
+  4. Codificar URL                 (para que título, espacios y saltos quepan)
+  5. Texto: https://haul-o6sv.onrender.com/#add=<codificado>
+  6. Abrir URL                     (Haul saca el primer enlace y usa el título)
+
+Nada de convertir la entrada a URL (coerción): si uno de los elementos es un
+texto que no es un enlace, la acción «Texto» falla en seco y el Atajo se para
+("no ha podido convertir Texto en URL", visto el 31/10/2026 con Zalando).
 
 No usa «Obtener URLs de la entrada»: con lo que entregan las apps de Amazon y
 Zalando (un texto y una URL) esa acción devuelve vacío (comprobado el 31/10/2026
@@ -25,7 +29,7 @@ OUT = sys.argv[2] if len(sys.argv) > 2 else "anadir-a-haul-unsigned.shortcut"
 def uid():
     return str(uuid.uuid4()).upper()
 
-u_texto, u_bruto, u_cod, u_final = uid(), uid(), uid(), uid()
+u_texto, u_urls, u_bruto, u_cod, u_final = uid(), uid(), uid(), uid(), uid()
 ENTRADA = {"Value": {"Type": "ExtensionInput"}, "WFSerializationType": "WFTextTokenAttachment"}
 
 def action(ident, **params):
@@ -37,22 +41,22 @@ def token_string(string, attachments):
 def ref(u, name):
     return {"OutputUUID": u, "OutputName": name, "Type": "ActionOutput"}
 
-# 2. «texto» + "\n" + «entrada como URL»
-bruto = token_string("\ufffc\n\ufffc", {
-    # el texto primero: Haul saca el nombre de lo que va delante del primer enlace
+# 3. «texto» + "\n" + «URLs» + "\n" + «entrada de atajo»: el texto primero, porque
+#    Haul saca el nombre de lo que va delante del primer enlace. Todo son
+#    adjuntos sin coerción: nunca fallan, como mucho quedan vacíos.
+bruto = token_string("\ufffc\n\ufffc\n\ufffc", {
     "{0, 1}": ref(u_texto, "Texto"),
-    # la entrada como URL cubre las páginas de Safari (coerción a WFURLContentItem)
-    "{2, 1}": {"Type": "ExtensionInput", "Aggrandizements": [
-        {"Type": "WFCoercionVariableAggrandizement", "CoercionItemClass": "WFURLContentItem"},
-    ]},
+    "{2, 1}": ref(u_urls, "URLs"),
+    "{4, 1}": {"Type": "ExtensionInput"},
 })
 
-# 4. dirección de Haul + codificado
+# 5. dirección de Haul + codificado
 prefix = BASE.rstrip("/") + "/#add="
 final = token_string(prefix + "￼", {"{%d, 1}" % len(prefix): ref(u_cod, "Codificado")})
 
 actions = [
     action("is.workflow.actions.detect.text", UUID=u_texto, CustomOutputName="Texto", WFInput=ENTRADA),
+    action("is.workflow.actions.detect.link", UUID=u_urls, CustomOutputName="URLs", WFInput=ENTRADA),
     action("is.workflow.actions.gettext", UUID=u_bruto, WFTextActionText=bruto),
     # sin WFInput: toma la salida de la acción anterior (el texto en bruto)
     action("is.workflow.actions.urlencode", UUID=u_cod, CustomOutputName="Codificado", WFEncodeMode="Encode"),

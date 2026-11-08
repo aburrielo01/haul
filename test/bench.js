@@ -90,6 +90,70 @@ async function ok(name, fn) {
     assert.strictEqual(state.rows.find((r) => r.id === 'E005').trail, undefined);
   });
 
+  await ok('el historial guarda las últimas lecturas de cada enlace y etiqueta estable / inestable / falla', async () => {
+    const items = bench.loadItems();
+    let flip = false;
+    const fake = async (url) => {
+      const it = items.find((i) => i.url === url);
+      if (it.id === 'E001') throw new Error('bloqueado');                       // falla siempre
+      if (it.id === 'E021') return { ok: true, mode: 'fetch', title: it.title, priceValue: it.price, image: flip ? '' : 'https://x/i.jpg' }; // baila
+      return { ok: true, mode: 'fetch', title: it.title, priceValue: it.price, image: 'https://x/i.jpg' };
+    };
+    await db.cacheSet('bench:history', { runs: [], byId: {} }, 1000 * 60); // las pruebas anteriores ya leyeron E005
+    // tres pasadas filtradas sobre los mismos tres enlaces
+    for (let i = 0; i < 3; i++) {
+      flip = i === 1;
+      const started = await bench.run({ db, extract: fake, filter: { ids: ['E001', 'E005', 'E021'] }, fresh: true });
+      assert.strictEqual(started.started, true);
+      await started.finished;
+    }
+    const state = await bench.report(db);
+    const byId = Object.fromEntries(state.rows.map((r) => [r.id, r.history]));
+    assert.strictEqual(byId.E005.label, 'estable');
+    assert.strictEqual(byId.E005.marks, '✓✓✓');
+    assert.strictEqual(byId.E001.label, 'falla');
+    assert.strictEqual(byId.E021.label, 'inestable');
+    assert.strictEqual(byId.E021.marks, '✓✗✓');
+    assert.deepStrictEqual(state.consistency.unstable, ['E021']);
+    assert.deepStrictEqual(state.consistency.failing, ['E001']);
+    assert.strictEqual(state.consistency.counts.estable, 1);
+    const history = await bench.loadHistory(db);
+    assert.strictEqual(history.runs.length, 0, 'las pasadas filtradas no cuentan como pasada completa');
+  });
+
+  await ok('el historial se queda con las últimas cinco lecturas por enlace', async () => {
+    const items = bench.loadItems();
+    const fake = async (url) => { const it = items.find((i) => i.url === url); return { ok: true, mode: 'fetch', title: it.title, priceValue: it.price, image: 'https://x/i.jpg' }; };
+    for (let i = 0; i < 4; i++) await (await bench.run({ db, extract: fake, filter: { ids: ['E005'] }, fresh: true })).finished;
+    const history = await bench.loadHistory(db);
+    assert.strictEqual(history.byId.E005.length, bench.HISTORY_PER_ID);
+  });
+
+  await ok('tres pasadas completas en objetivo = consistente; una por debajo, no', async () => {
+    const items = bench.loadItems();
+    let failCount = 0;
+    const fake = async (url) => {
+      const it = items.find((i) => i.url === url);
+      const idx = items.indexOf(it);
+      if (idx < failCount) throw new Error('bloqueado');
+      return { ok: true, mode: 'fetch', title: it.title, priceValue: it.price, image: 'https://x/i.jpg' };
+    };
+    await db.cacheSet('bench:history', { runs: [], byId: {} }, 1000 * 60);
+    for (const f of [0, 3, 5]) { failCount = f; await (await bench.run({ db, extract: fake, fresh: true, concurrency: 2 })).finished; }
+    let state = await bench.report(db);
+    assert.strictEqual(state.consistency.runs.length, 3);
+    assert.strictEqual(state.consistency.enough, true);
+    assert.strictEqual(state.consistency.consistent, true, '100, 97 y 95 % están en objetivo');
+    assert.strictEqual(state.consistency.minPct, 95);
+    failCount = 12;
+    await (await bench.run({ db, extract: fake, fresh: true })).finished;
+    state = await bench.report(db);
+    assert.strictEqual(state.consistency.consistent, false, 'con una al 88 % ya no');
+    assert.strictEqual(state.consistency.runs.length, 3, 'solo mira las tres últimas');
+    const history = await bench.loadHistory(db);
+    assert.strictEqual(history.runs.length, 4);
+  });
+
   console.log(`\n${passed} correctas\n`);
   process.exit(process.exitCode || 0);
 })();

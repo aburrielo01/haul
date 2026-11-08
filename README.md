@@ -68,14 +68,17 @@ compartir del sistema; en iPhone, que todavía no lo admite, está el botón
 *Pegar imagen copiada* dentro de la pestaña Captura.
 
 **El Atajo de iPhone.** `public/atajo/anadir-a-haul.shortcut` es un Atajo firmado (nombre sin «ñ»: Linux distingue las dos formas Unicode de la letra y GitHub la subió descompuesta)
-(se instala con un toque desde Perfil → *Haul en el menú Compartir*) con cinco
-acciones: *Obtener texto de la entrada* → *Texto* (la entrada como URL + el
-texto) → *Codificar URL* → *Texto* `https://…/#add=<codificado>` → *Abrir URL*.
-Haul saca el primer enlace de lo que llega y usa el nombre que venía en el texto.
-No usa *Obtener URLs de la entrada*: las apps de Amazon y Zalando entregan un
-texto y una URL, y con esa entrada la acción devuelve vacío (comprobado con el
-Atajo de diagnóstico). Los enlaces cortos de las apps (`amzn.eu/d/…`) los expande
-el servidor antes de elegir adaptador. Si cambias de dominio, regenera el fichero:
+(se instala con un toque desde Perfil → *Haul en el menú Compartir*) con seis
+acciones: *Obtener texto de la entrada* → *Obtener URLs de la entrada* → *Texto*
+(texto + URLs + entrada) → *Codificar URL* → *Texto* `https://…/#add=<codificado>`
+→ *Abrir URL*. Haul saca el primer enlace de lo que llega y usa el nombre que
+venía en el texto. Dos lecciones del 31/10/2026, comprobadas con el Atajo de
+diagnóstico: las apps de Amazon y Zalando entregan un texto (con el enlace
+dentro) y una URL, y con esa entrada *Obtener URLs* devuelve vacío, así que el
+enlace se saca del texto; y convertir la entrada a URL (coerción) falla en seco
+cuando uno de los elementos es texto, así que no se usa. Los enlaces cortos de
+las apps (`amzn.eu/d/…`) los expande el servidor antes de elegir adaptador. Si
+cambias de dominio, regenera el fichero:
 
 ```bash
 python3 scripts/make-shortcut.py https://tu-dominio.com atajo.shortcut
@@ -119,6 +122,11 @@ node test/bench-local.js           # el banco de 100 enlaces desde tu máquina (
 
 ### Variables de entorno
 
+En el Mac van en un fichero `.env` en la raíz (copia `.env.example`, rellena y
+guarda; el servidor y las pruebas lo leen solos y nunca se sube). En Render
+van en el panel *Environment* del servicio.
+
+
 | Variable | Para qué | Por defecto |
 |---|---|---|
 | `PORT` | Puerto HTTP | `3000` |
@@ -141,6 +149,12 @@ node test/bench-local.js           # el banco de 100 enlaces desde tu máquina (
 | `WATCH_BATCH` | Piezas por despertar (de una en una, con pausa) | `20` |
 | `WATCH_PAUSE_MS` | Pausa entre dos lecturas (ms) | `1500` |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Activan los avisos push (ver abajo) | — |
+| `ANTHROPIC_API_KEY` | Activa la lectura de capturas y el rescate de fichas con Claude | — |
+| `AI_MODEL` | Modelo de Claude para esas lecturas | `claude-haiku-5-5` |
+| `AI_DAILY_LIMIT` | Tope de llamadas a Claude al día (0 lo apaga) | `300` |
+| `AWIN_PUBLISHER_ID` / `AWIN_TOKEN` | Cuenta de publisher de AWIN y su token OAuth2 (ui.awin.com/awin-api) | — |
+| `AWIN_ADVERTISERS` | Tiendas aprobadas: `zalando.es=12345:es_ES,asos.com=678:es_ES` | — |
+| `AWIN_FEED_EVERY_H` | Cada cuántas horas se leen los feeds | `24` |
 | `VAPID_SUBJECT` | Contacto que viaja con cada aviso (`mailto:` o URL) | — |
 
 ## Vigilancia de precios y avisos
@@ -172,6 +186,46 @@ los avisos solo llegan con Haul instalada en la pantalla de inicio (iOS 16.4+).
 
 `/api/health` devuelve `watch` (piezas comprobadas, cambios, bajadas, último
 despertar) y `push` (si hay claves).
+
+## Lectura con IA: capturas y fichas a medias
+
+Con `ANTHROPIC_API_KEY` en el entorno, dos cosas pasan por Claude (`lib/ai.js`):
+
+- **Capturas de pantalla.** El móvil reduce la imagen (como ya hacía) y la
+  manda a `POST /api/shot`; vuelven nombre, precio actual, moneda, tienda,
+  color y talla con salida estructurada. El OCR del móvil (Tesseract) sigue
+  ahí como plan B: sin clave, sin red o pasado el tope diario, la app lee la
+  captura como antes.
+- **Fichas a medias.** Cuando la cascada de lectura acaba sin nombre o sin
+  precio pero con una página real (no un muro anti-bot), se le pide a Claude
+  lo que falta a partir del texto visible. La ficha sale como `parcial+ia`.
+  El vigilante (modo barato) no lo usa.
+
+Coste: `AI_MODEL` por defecto Claude Haiku 5.5 (≈ 0,0003 $ por captura),
+`AI_DAILY_LIMIT` corta a las 300 llamadas diarias, y la misma captura o el
+mismo enlace no se pagan dos veces (caché de 7 días y 1 día). `/api/health`
+→ `ai` enseña llamadas, tokens y gasto estimado del día. Pruebas:
+`node test/ai.js`; con clave y capturas en `test/shots/`, lectura real.
+
+## AWIN: afiliación y precios sin scraping
+
+Con cuenta de publisher y tiendas aprobadas (`AWIN_PUBLISHER_ID`, `AWIN_TOKEN`,
+`AWIN_ADVERTISERS`), `lib/awin.js` hace dos cosas, siempre en segundo plano
+desde el vigilante:
+
+- **Enlaces de afiliado.** Por lotes de 100 (link builder), para cada pieza de
+  una tienda AWIN; se guardan en la pieza y la ficha abre la tienda por ellos.
+  Un anunciante que no permite deep links queda anotado un mes.
+- **Precios desde el feed.** Una vez al día, por cada anunciante con piezas,
+  se descarga su feed JSON Lines en streaming y solo se conservan las filas
+  cuyo enlace está en HAUL: un feed de cientos de miles de productos no pasa
+  por memoria. Esas piezas se actualizan como las demás (comparación,
+  historial, avisos) sin leer la tienda. El feed respeta el límite de AWIN de
+  5 peticiones por minuto; sin stock, el precio no se toca.
+
+Las aprobaciones se piden en el directorio de anunciantes de AWIN; cada
+aprobación es una entrada más en `AWIN_ADVERTISERS`. `/api/health` → `awin`
+cuenta enlaces y feeds. Pruebas: `node test/awin.js`.
 
 ## Tiendas con protección anti-bot
 
