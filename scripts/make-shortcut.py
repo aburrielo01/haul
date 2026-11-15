@@ -1,12 +1,13 @@
 """Fabrica el Atajo "Añadir a Haul" (sin firmar) en formato .shortcut (plist).
 
-Seis acciones:
-  1. Obtener texto de la entrada   (lo que comparte la app: título + enlace dentro)
-  2. Obtener URLs de la entrada    (vacío con las apps; con una página de Safari, su enlace)
-  3. Texto: «texto» + salto + «URLs» + salto + «entrada de atajo»
-  4. Codificar URL                 (para que título, espacios y saltos quepan)
-  5. Texto: https://haul-o6sv.onrender.com/#add=<codificado>
-  6. Abrir URL                     (Haul saca el primer enlace y usa el título)
+Siete acciones:
+  1. Obtener texto de la entrada        (lo que comparte la app: título + enlace dentro)
+  2. Obtener URLs de la entrada (texto) (los enlaces de ese texto)
+  3. Obtener URLs de la entrada (variable) (una página de Safari, si la acción la acepta así)
+  4. Texto: «texto» + «URLs» + «URLs página» + «entrada», una por línea
+  5. Codificar URL (entrada como texto) (para que título, espacios y saltos quepan)
+  6. Texto: https://haul-o6sv.onrender.com/#add=<codificado>
+  7. Abrir URL                          (Haul saca el primer enlace y usa el título)
 
 Nada de convertir la entrada a URL (coerción): si uno de los elementos es un
 texto que no es un enlace, la acción «Texto» falla en seco y el Atajo se para
@@ -29,7 +30,7 @@ OUT = sys.argv[2] if len(sys.argv) > 2 else "anadir-a-haul-unsigned.shortcut"
 def uid():
     return str(uuid.uuid4()).upper()
 
-u_texto, u_urls, u_bruto, u_cod, u_final = uid(), uid(), uid(), uid(), uid()
+u_texto, u_urls, u_urls2, u_bruto, u_cod, u_final = uid(), uid(), uid(), uid(), uid(), uid()
 ENTRADA = {"Value": {"Type": "ExtensionInput"}, "WFSerializationType": "WFTextTokenAttachment"}
 
 def action(ident, **params):
@@ -41,13 +42,22 @@ def token_string(string, attachments):
 def ref(u, name):
     return {"OutputUUID": u, "OutputName": name, "Type": "ActionOutput"}
 
+def as_text(variable):
+    """La variable metida en un campo de texto. «Codificar URL» y «Obtener URLs
+    de la entrada» solo leen su entrada así: si se les pasa como variable
+    suelta (WFTextTokenAttachment) devuelven vacío. Comprobado en el Mac el
+    15/11/2026 con `shortcuts run` y nueve variantes; «Obtener texto» y
+    «Base64» son al revés y quieren la variable suelta."""
+    return token_string("\ufffc", {"{0, 1}": variable})
+
 # 3. «texto» + "\n" + «URLs» + "\n" + «entrada de atajo»: el texto primero, porque
 #    Haul saca el nombre de lo que va delante del primer enlace. Todo son
 #    adjuntos sin coerción: nunca fallan, como mucho quedan vacíos.
-bruto = token_string("\ufffc\n\ufffc\n\ufffc", {
-    "{0, 1}": ref(u_texto, "Texto"),
-    "{2, 1}": ref(u_urls, "URLs"),
-    "{4, 1}": {"Type": "ExtensionInput"},
+bruto = token_string("\ufffc\n\ufffc\n\ufffc\n\ufffc", {
+    "{0, 1}": ref(u_texto, "Texto"),        # apps: título + enlace
+    "{2, 1}": ref(u_urls, "URLs"),          # enlaces encontrados en ese texto
+    "{4, 1}": ref(u_urls2, "URLs página"),  # página de Safari (si la acción la acepta así)
+    "{6, 1}": {"Type": "ExtensionInput"},   # la entrada tal cual, por si acaso
 })
 
 # 5. dirección de Haul + codificado
@@ -56,10 +66,13 @@ final = token_string(prefix + "￼", {"{%d, 1}" % len(prefix): ref(u_cod, "Codif
 
 actions = [
     action("is.workflow.actions.detect.text", UUID=u_texto, CustomOutputName="Texto", WFInput=ENTRADA),
-    action("is.workflow.actions.detect.link", UUID=u_urls, CustomOutputName="URLs", WFInput=ENTRADA),
+    action("is.workflow.actions.detect.link", UUID=u_urls, CustomOutputName="URLs", WFInput=as_text({"Type": "ExtensionInput"})),
+    action("is.workflow.actions.detect.link", UUID=u_urls2, CustomOutputName="URLs página", WFInput=ENTRADA),
     action("is.workflow.actions.gettext", UUID=u_bruto, WFTextActionText=bruto),
-    # sin WFInput: toma la salida de la acción anterior (el texto en bruto)
-    action("is.workflow.actions.urlencode", UUID=u_cod, CustomOutputName="Codificado", WFEncodeMode="Encode"),
+      # Entrada explícita y como texto (as_text): con la variable suelta
+    # «Codificado» salía vacío y Haul recibía "#add=" a secas (15/11/2026).
+    action("is.workflow.actions.urlencode", UUID=u_cod, CustomOutputName="Codificado", WFEncodeMode="Encode",
+           WFInput=as_text(ref(u_bruto, "Texto"))),
     action("is.workflow.actions.gettext", UUID=u_final, WFTextActionText=final),
     action("is.workflow.actions.openurl", WFInput={"Value": ref(u_final, "Texto"), "WFSerializationType": "WFTextTokenAttachment"}),
 ]

@@ -1,5 +1,26 @@
 # Cambios
 
+## 4.1.2 · 15 de noviembre de 2026
+
+### El Atajo de iPhone, por fin con el enlace
+
+- Causa encontrada probando el Atajo en el motor de Atajos del Mac
+  (`shortcuts run` con el texto real que comparte Zalando): «Codificar URL» y
+  «Obtener URLs de la entrada» solo leen su entrada si va escrita como texto
+  (`WFTextTokenString`); como variable suelta devuelven vacío. Por eso Haul
+  recibía `#add=` a secas y avisaba «ha llegado sin enlace». «Obtener texto» y
+  «Base64» son al revés. Nueve variantes medidas; anotado en el generador.
+- El Atajo lleva ahora las dos formas de «Obtener URLs» (texto y variable)
+  para cubrir las apps y las páginas de Safari. Probado en el Mac con el texto
+  de Zalando, el de Amazon y un enlace suelto: Haul recibe título y enlace, y
+  la ficha se lee (Zalando: «CLUB C 85 UNISEX - Zapatillas - off-white»,
+  74,95 €).
+- El service worker ya no guarda en caché `/atajo/`: el móvil instalaba la
+  versión del Atajo que descargó la primera vez aunque el servidor tuviera
+  otra.
+- `scripts/pasada-banco.sh`: lanza una pasada del banco en Render y la vigila
+  (lee el token del `.env`, un solo lector).
+
 ## 4.1.1 · 15 de noviembre de 2026
 
 ### Banco: la hoja al día y las fichas retiradas

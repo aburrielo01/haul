@@ -67,18 +67,17 @@ como foto— y la app abre el formulario con eso ya cargado. En Android funciona
 compartir del sistema; en iPhone, que todavía no lo admite, está el botón
 *Pegar imagen copiada* dentro de la pestaña Captura.
 
-**El Atajo de iPhone.** `public/atajo/anadir-a-haul.shortcut` es un Atajo firmado (nombre sin «ñ»: Linux distingue las dos formas Unicode de la letra y GitHub la subió descompuesta)
-(se instala con un toque desde Perfil → *Haul en el menú Compartir*) con seis
-acciones: *Obtener texto de la entrada* → *Obtener URLs de la entrada* → *Texto*
-(texto + URLs + entrada) → *Codificar URL* → *Texto* `https://…/#add=<codificado>`
-→ *Abrir URL*. Haul saca el primer enlace de lo que llega y usa el nombre que
-venía en el texto. Dos lecciones del 31/10/2026, comprobadas con el Atajo de
-diagnóstico: las apps de Amazon y Zalando entregan un texto (con el enlace
-dentro) y una URL, y con esa entrada *Obtener URLs* devuelve vacío, así que el
-enlace se saca del texto; y convertir la entrada a URL (coerción) falla en seco
-cuando uno de los elementos es texto, así que no se usa. Los enlaces cortos de
-las apps (`amzn.eu/d/…`) los expande el servidor antes de elegir adaptador. Si
-cambias de dominio, regenera el fichero:
+**El Atajo de iPhone.** `public/atajo/anadir-a-haul.shortcut` es un Atajo firmado
+(se instala con un toque desde Perfil → *Haul en el menú Compartir*). Recoge el
+texto que comparte la app (título y enlace), los enlaces que encuentra y la
+entrada tal cual, lo codifica y abre `https://…/#add=<texto>`; Haul saca el
+primer enlace y usa el título. Reglas aprendidas a golpes (todas comprobadas con
+`shortcuts run` en un Mac): «Codificar URL» y «Obtener URLs de la entrada»
+quieren su entrada **como texto**, no como variable suelta, o devuelven vacío;
+nunca convertir la entrada a URL (con un texto que no es enlace, Atajos se
+para); nombres de fichero sin «ñ». Los enlaces cortos de las apps
+(`amzn.eu/d/…`) los expande el servidor. Si cambias de dominio, regenera el
+fichero:
 
 ```bash
 python3 scripts/make-shortcut.py https://tu-dominio.com atajo.shortcut

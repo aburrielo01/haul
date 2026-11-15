@@ -1,6 +1,6 @@
 /* Service worker de Haul: la app abre al instante y sigue navegable sin datos. */
 
-const VERSION = 'haul-v4.1.1';
+const VERSION = 'haul-v4.1.2';
 const SHARE_CACHE = 'haul-share';
 const SHELL = ['/', '/styles.css', '/app.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/favicon.svg'];
 
@@ -58,6 +58,9 @@ self.addEventListener('fetch', (event) => {
 
   // La API siempre va a la red: los datos deben estar frescos.
   if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/img')) return;
+  // El Atajo de iPhone, también: con caché, el móvil instalaba la versión que
+  // descargó la primera vez aunque el servidor ya tuviera otra.
+  if (url.pathname.startsWith('/atajo/')) return;
 
   // Imágenes de producto: primero caché, es lo que más pesa.
   if (url.pathname.startsWith('/api/img')) {

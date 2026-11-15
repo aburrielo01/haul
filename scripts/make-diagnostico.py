@@ -39,7 +39,9 @@ ref_resumen = {"Value": {"OutputUUID": u_resumen, "OutputName": "Texto", "Type":
 
 actions = [
     action("is.workflow.actions.getitemtype", UUID=u_tipo, CustomOutputName="Tipo", WFInput=ENTRADA),
-    action("is.workflow.actions.detect.link", UUID=u_urls, CustomOutputName="URLs", WFInput=ENTRADA),
+    # «Obtener URLs» solo lee su entrada escrita como texto (ver make-shortcut.py)
+    action("is.workflow.actions.detect.link", UUID=u_urls, CustomOutputName="URLs",
+           WFInput={"Value": {"string": "\ufffc", "attachmentsByRange": {"{0, 1}": {"Type": "ExtensionInput"}}}, "WFSerializationType": "WFTextTokenString"}),
     action("is.workflow.actions.detect.text", UUID=u_texto, CustomOutputName="Texto", WFInput=ENTRADA),
     action("is.workflow.actions.gettext", UUID=u_resumen, WFTextActionText=resumen),
     action("is.workflow.actions.setclipboard", WFInput=ref_resumen),

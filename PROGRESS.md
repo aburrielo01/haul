@@ -1,7 +1,7 @@
 # PROGRESS.md · HAUL
 
-Última actualización: 15 de noviembre de 2026. En vivo: 4.1.0. En local,
-probada y sin subir: 4.1.1 (hoja del banco al día, fichas retiradas).
+Última actualización: 15 de noviembre de 2026. En vivo: 4.1.1. En local,
+probada y sin subir: 4.1.2 (Atajo corregido y probado en el Mac).
 
 ## Hecho
 - **v4.0** (24–26 oct): vigilancia de precios con avisos push opcionales,
@@ -51,11 +51,10 @@ probada y sin subir: 4.1.1 (hoja del banco al día, fichas retiradas).
   crear el token en ui.awin.com/awin-api y rellenar `AWIN_PUBLISHER_ID`,
   `AWIN_TOKEN` y `AWIN_ADVERTISERS` en Render. Primera pasada real: comprobar
   en `/api/health` → `awin` enlaces y feed, y el tiempo del feed de Zalando.
-- **Atajo de iPhone**: prueba real pendiente desde Amazon, Zalando y Safari con
-  el Atajo sin conversión (subido el 2 nov). Con el resultado se decide si se
-  queda como extra o se retira.
-- **Subir la 4.1.0 completa** a GitHub (carpeta limpia) y comprobar
-  `/api/health` → `ai` y `awin` en Render.
+- **Atajo de iPhone**: causa encontrada y corregida el 15 nov («Codificar URL»
+  y «Obtener URLs» quieren la entrada como texto). Probado en el motor de
+  Atajos del Mac con Zalando, Amazon y un enlace suelto. Falta: subir la 4.1.2,
+  reinstalar el Atajo en el iPhone y probar desde las apps y desde Safari.
 - **Persistencia**: falta saber si lo que falla es el móvil (listas que
   desaparecen: claves del dispositivo) o el servidor.
 - Comprobar Vivaticket en Render. Banco: Shein ×2, About You, AliExpress E059,

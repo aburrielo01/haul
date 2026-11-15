@@ -18,11 +18,12 @@ En vivo: https://haul-o6sv.onrender.com (`/api/health` dice la versión).
   Grotesk / Playfair / Space Mono). No se restyla con el sistema de Alfred.
 - Nombres de fichero dentro de `public/` solo con letras ASCII: la «ñ» de
   «Añadir a Haul.shortcut» llegó a Linux en otra forma Unicode y la ruta falló.
-- El Atajo de iPhone no usa «Obtener URLs de la entrada» (devuelve vacío con lo
-  que mandan Amazon y Zalando) ni convierte la entrada a URL (Atajos se para).
-  Se regenera con `scripts/make-shortcut.py` y se firma con
-  `shortcuts sign --mode anyone` en el Mac. `scripts/make-diagnostico.py` enseña
-  qué entrega una app al menú Compartir.
+- El Atajo de iPhone: «Codificar URL» y «Obtener URLs de la entrada» llevan la
+  entrada como texto (`WFTextTokenString`), nunca como variable suelta (salen
+  vacías); nada de convertir la entrada a URL (Atajos se para). Se regenera con
+  `scripts/make-shortcut.py`, se firma con `shortcuts sign --mode anyone` y,
+  antes de dárselo a Alejandro, se prueba en el Mac con `shortcuts run` y un
+  texto real (la copia de prueba quita «Abrir URL»).
 
 ## Cómo se despliega
 - No hay git en el Mac. Alejandro sube los ficheros por la web de GitHub (menos
