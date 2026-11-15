@@ -111,3 +111,24 @@ Histórico: 62,6 % → 73 % → 81 % → 89 % (v3.10, 18 oct, en Render con
 desbloqueador) → hoja refrescada y 66 % local sin desbloqueador (v4.0, 25 oct)
 → 86 % en Render con la hoja nueva → **94 %** con los adaptadores de Snipes,
 Temu y Zara Home y los reintentos del desbloqueador (v4.0, 26 oct).
+
+## 8 nov 2026 · pasadas de consistencia (4.1.0)
+
+- El banco guarda historial desde la 4.1.0 (`bench:history`): últimas 5
+  lecturas por enlace y últimas 10 pasadas completas; «consistente» = las 3
+  últimas pasadas completas ≥ 92 %.
+- **No lanzar con `concurrency=2` en Render**: con dos lectores a la vez
+  (Chromium incluido) la instancia se reinició a los 22 enlaces y la pasada
+  quedó en `interrupted`. Con un lector continúa por donde iba.
+
+### Pasada 1 (8 nov, 4.1.0): 79/100
+
+| Causa | Enlaces | Qué se hizo |
+|---|---|---|
+| Precio cambiado (Black Friday); lector correcto, verificado a mano | E032 Levi's, E041 Snipes, E057/E058 Miravia, E063 Etsy, E083/E084 PcComponentes, E086 MediaMarkt, E088 Fnac (por HTML del desbloqueador: captcha en el navegador), E092 Samsung | hoja actualizada; tolerancia en Miravia (30 %) y Fnac (25 %) |
+| Ficha retirada | E037 JD Sports (404, «Sin resultados»), E039 Foot Locker («Product not found» a proxy y navegador; a una conexión doméstica aún le sirve el producto), E068 Wallapop (vendido) | sustituidas; el lector ahora devuelve `GONE` |
+| Terceros | E015/E016 Shein y E071/E072 Sephora (tiempo agotado del desbloqueador), E055 About You, E059 AliExpress, E069/E070 Depop (KYC) | documentados |
+
+Con la hoja al día y los enlaces sustituidos, la pasada 1 habría dado 92 %.
+Falta medirlo: pasadas 2, 3 y 4 con la 4.1.1, a horas distintas del mismo día
+para que el mercado no se mueva entre ellas.

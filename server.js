@@ -457,11 +457,13 @@ app.post('/api/extract', limitExtract, async (req, res) => {
     // y una traza de error en pantalla da sensación de app rota.
     console.error('extract', url, err && err.message, JSON.stringify((err && err.trail) || []).slice(0, 600));
     const blocked = err && err.code === 'BLOCKED';
-    res.status(blocked ? 422 : 502).json({
+    const gone = err && err.code === 'GONE';
+    res.status(blocked ? 422 : gone ? 404 : 502).json({
       ok: false,
-      code: blocked ? 'BLOCKED' : 'EXTRACT_FAILED',
+      code: blocked ? 'BLOCKED' : gone ? 'GONE' : 'EXTRACT_FAILED',
       message: blocked
         ? 'Esta tienda no deja que otras apps lean sus fichas.'
+        : gone ? 'Este producto ya no está en la tienda.'
         : 'No hemos podido leer esta página.',
       // lo poco que se puede deducir del propio enlace, para no partir de cero
       fallback: (err && err.fallback) || {

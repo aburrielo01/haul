@@ -1,5 +1,26 @@
 # Cambios
 
+## 4.1.1 · 15 de noviembre de 2026
+
+### Banco: la hoja al día y las fichas retiradas
+
+- Primera pasada completa en Render con la 4.1.0 (8 nov): 79 %. De los 21
+  fallos, 10 eran precios que habían cambiado (Black Friday): verificados uno
+  a uno en un navegador real, **el lector leyó en todos el precio correcto del
+  día**. La hoja se actualiza con ellos (`verified: 2026-11-08`) y las filas
+  volátiles llevan tolerancia: Miravia 30 % (ofertas flash), Fnac 25 % (lo
+  vende un tercero del marketplace que rota).
+- 3 enlaces muertos sustituidos: JD Sports (ficha retirada, 404), Foot Locker
+  («Product not found» para proxies y navegador) y Wallapop (anuncio vendido).
+- El lector reconoce una **ficha retirada** (`gone`): título de plantilla sin
+  rellenar como «(:title)», «Sin resultados», «Este producto ya no está
+  disponible», o el estado con `"statusCode":404` y «Product not found». Solo
+  cuenta si no hay producto ni precio; un agotado no lo es. Sale con el error
+  `GONE` y el mensaje «Este producto ya no está en la tienda», sin gastar
+  desbloqueador ni IA, y la hoja de añadir explica qué ha pasado en vez de
+  guardar una pieza llamada «(:title)».
+- No lanzar el banco con dos lectores en Render: la instancia se reinicia.
+
 ## 4.1.0 · en curso (7 de noviembre de 2026)
 
 ### Banco de pruebas: consistencia, no una foto
@@ -23,6 +44,9 @@
   precio pero hay una página real (no un muro), se pide a Claude lo que falta
   a partir del texto visible; la ficha sale como `parcial+ia`. No se usa en
   el modo barato del vigilante.
+- `/api/health` → `ai` dice si hay clave, si está en pausa (clave rechazada:
+  15 minutos; límite de peticiones: 1 minuto) y el último error con su
+  motivo, para no tener que ir a los logs.
 - Coste bajo control: modelo por variable (`AI_MODEL`, por defecto
   `claude-haiku-5-5`), tope diario (`AI_DAILY_LIMIT`, 300), caché por huella
   de imagen (7 días) y por enlace (1 día), y gasto estimado del día en

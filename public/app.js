@@ -802,9 +802,12 @@ async function readUrl() {
     // el nombre y la tienda: así el formulario no empieza vacío.
     const fb = (err.data && err.data.fallback) || {};
     const blocked = err.code === 'BLOCKED';
+    const gone = err.code === 'GONE';
     showAddError(
       blocked ? `${fb.shop || 'Esta tienda'} no deja que otras apps lean sus fichas` : err.message,
-      { hint: 'Haz una captura de la ficha y la usamos como foto del producto. El precio lo lee sola.' }
+      gone
+        ? { hint: 'La tienda ha retirado la ficha (vendida, agotada para siempre o enlace caducado). Puedes guardarla igualmente con los datos de abajo.', offerShot: false }
+        : { hint: 'Haz una captura de la ficha y la usamos como foto del producto. El precio lo lee sola.' }
     );
     showPreview({
       // el nombre que venía en el texto compartido es mejor que el sacado de la URL

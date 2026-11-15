@@ -1,7 +1,7 @@
 # PROGRESS.md · HAUL
 
-Última actualización: 7 de noviembre de 2026. En vivo: 4.1.0 (banco con
-historial); el resto de la 4.1.0 está construido y probado en local, sin subir.
+Última actualización: 15 de noviembre de 2026. En vivo: 4.1.0. En local,
+probada y sin subir: 4.1.1 (hoja del banco al día, fichas retiradas).
 
 ## Hecho
 - **v4.0** (24–26 oct): vigilancia de precios con avisos push opcionales,
@@ -32,13 +32,20 @@ historial); el resto de la 4.1.0 está construido y probado en local, sin subir.
   Pegar) va primero; el Atajo queda como opción de dos toques.
 
 ## Pendiente
-- **Banco en Render** (A1, A3, A4): necesita `.env` con `DIAG_TOKEN` para
-  lanzar desde aquí. Tres pasadas completas a horas distintas, lista de
-  inestables, arreglar los que dependan de código, `test/banco-estado.md`.
-- **Clave de Anthropic**: crearla en platform.claude.com, ponerla en `.env`
-  (local) y en Render; entonces `node test/ai.js` hace la lectura real de las
-  capturas de `test/shots/` y se mide calidad y coste. Si Haiku falla nombres o
-  precios, `AI_MODEL=claude-opus-5-5`.
+- **Banco en Render**: pasada 1 (8 nov) = 79 %; analizada fallo a fallo
+  (`test/banco-estado.md`): 10 precios cambiados por Black Friday (lector
+  correcto, hoja actualizada), 3 fichas retiradas (sustituidas; el lector
+  devuelve `GONE`), 8 de terceros. Con eso la pasada 1 habría dado 92 %.
+  Falta: subir la 4.1.1 y lanzar las pasadas 2, 3 y 4 el mismo día, con un
+  solo lector. El token está en `.env` (comprobado).
+- **Clave de Anthropic**: válida y en `.env` (8 nov). Lectura real con Haiku
+  5.5 de las 4 capturas: Nike y Zalando perfectas (nombre, precio, tienda,
+  color), Amazon sin título porque la captura no lo enseña, Zalando con pop-up
+  confianza 0,1 (honesto). 0,0014 $ las cuatro. En Render funciona: la Nike
+  leída en producción en 7 s por 0,0003 $. El primer rechazo fue pasajero (mi
+  imagen de prueba no era válida); el nuevo `lib/ai.js` enseña el motivo en el
+  health si vuelve a pasar. Probado por Alejandro en el iPhone (8 nov):
+  Añadir → Captura rellena la ficha.
 - **AWIN**: pedir aprobación a las tiendas en el directorio (Zalando, ASOS,
   Etsy, Douglas, Decathlon, Leroy Merlin, MediaMarkt, Uniqlo como candidatas),
   crear el token en ui.awin.com/awin-api y rellenar `AWIN_PUBLISHER_ID`,

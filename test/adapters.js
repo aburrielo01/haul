@@ -247,6 +247,29 @@ ok('una ficha que menciona "captcha" en su texto no es un muro (Etsy)', () => {
   const muro = parseHtml('<html><head><title>Access Denied</title></head><body>Reference #18.abc</body></html>', 'https://www.levi.com/x');
   assert.strictEqual(isWall(muro), true);
 });
+// Fichas retiradas, con las marcas reales vistas el 8 nov 2026
+ok('JD Sports retirada: título "(:title)" y "Sin resultados" → retirada', () => {
+  const html = '<html><head><title>(:title) - JD Sports España</title><meta property="og:title" content="(:title) - JD Sports España"></head><body><h1>Sin resultados</h1><div>Precio</div></body></html>';
+  const p = parseHtml(html, 'https://www.jdsports.es/product/negro-mckenzie-pantalones-de-chndal-script/19723602_jdsportses/');
+  assert.strictEqual(p.gone, true);
+});
+ok('Foot Locker retirada: estado con "statusCode":404 y "Product not found" → retirada', () => {
+  const html = '<html><head><title>Product ~ 314312743504.html | Foot Locker Spain</title></head><body><a>Inicia sesión</a><script>window.__S={"product":{"name":"~","code":"314312743504"},"statusCode":404,"errors":[{"message":"404 Product not found: 314312743504"}]}</script></body></html>';
+  const p = parseHtml(html, 'https://www.footlocker.es/es/product/~/314312743504.html');
+  assert.strictEqual(p.gone, true);
+});
+ok('Wallapop vendido: "Este producto ya no está disponible" → retirada', () => {
+  const html = '<html><head><title>Wallapop</title></head><body><h1>Este producto ya no está disponible</h1><img src="https://cdn.wallapop.com/x.jpg"></body></html>';
+  assert.strictEqual(parseHtml(html, 'https://es.wallapop.com/item/casco-1310724298').gone, true);
+});
+ok('un producto agotado pero con su ficha no cuenta como retirado', () => {
+  const html = '<html><head><title>Zapatilla X | Tienda</title><script type="application/ld+json">{"@type":"Product","name":"Zapatilla X","offers":{"price":"89.95","priceCurrency":"EUR","availability":"https://schema.org/OutOfStock"}}</script></head><body><h1>Zapatilla X</h1><p>Agotado</p></body></html>';
+  assert.strictEqual(parseHtml(html, 'https://tienda.test/p/x').gone, false);
+});
+ok('una ficha normal con "404" en el nombre no cuenta como retirada', () => {
+  const html = '<html><head><title>Camiseta Error 404 | Tienda</title></head><body><h1>Camiseta Error 404</h1><span class="price">19,99 €</span></body></html>';
+  assert.strictEqual(parseHtml(html, 'https://tienda.test/p/camiseta-404').gone, false);
+});
 ok('precio sin separador de miles: 1469 es 1469, no 146', () => {
   assert.strictEqual(parsePrice('1469', 'EUR').value, 1469);
   assert.strictEqual(parsePrice('1539 €').value, 1539);
