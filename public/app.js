@@ -190,6 +190,8 @@ const session = {
   filter: 'all',
   item: null,       // producto abierto
   pending: null,    // producto en vista previa, sin guardar
+  shotQueue: [],    // capturas de la misma tanda que aún no se han leído
+  shotTotal: 0,
   editingItem: null,
   listFormMode: 'create',
   collabToken: '',  // token recibido por enlace de colaboración
@@ -657,6 +659,7 @@ function betterTitle(extracted, shop) {
 function openAdd(prefillUrl, { photo = null } = {}) {
   if (!session.list) { toast('Abre o crea una lista primero'); return; }
   resetAdd();
+  clearShotQueue();
   session.sharedPhoto = photo && photo.type && photo.type.startsWith('image/') ? photo : null;
   openSheet('sheet-add');
   if (prefillUrl) {
@@ -681,6 +684,8 @@ function resetAdd() {
   $('#addPreview').classList.add('hidden');
   $('#addError').classList.add('hidden');
   $('#addDup').classList.add('hidden');
+  $('#addCheck').classList.add('hidden');
+  $('#addQueue').classList.add('hidden');
   $('#addLoader').classList.add('hidden');
   $('#shotProgress').classList.add('hidden');
   $('#urlInput').value = '';
@@ -841,6 +846,7 @@ function showPreview(data) {
   $('#previewPrice').value = data.priceText || '';
   $('#previewShop').value = data.shop || '';
   $('#previewNote').value = data.note || '';
+  $('#addCheck').classList.add('hidden');
   $('#addPreview').classList.remove('hidden');
   $('#addPreview').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   buzz(18);
@@ -921,6 +927,9 @@ async function saveItem() {
     priceText: $('#previewPrice').value.trim(),
     shop: $('#previewShop').value.trim(),
     note: $('#previewNote').value.trim(),
+    // color y talla viajan como campos propios cuando se conocen (captura leída o pieza ya guardada)
+    ...(session.pending?.color !== undefined ? { color: session.pending.color || '' } : {}),
+    ...(session.pending?.size !== undefined ? { size: session.pending.size || '' } : {}),
     url: session.pending?.url || '',
     image: session.pending?.image || '',
     priceValue: session.pending?.priceValue,
@@ -938,6 +947,11 @@ async function saveItem() {
     } else {
       await api(`/lists/${list.slug}/items`, { method: 'POST', body, slug: list.slug });
       toast('Guardado ✦');
+    }
+    // si quedaban capturas de la misma tanda, la hoja sigue abierta con la siguiente
+    if (!session.editingItem && nextShot()) {
+      refreshList().catch(() => {});
+      return;
     }
     closeSheets();
     await refreshList();
@@ -1038,6 +1052,77 @@ function downscale(file, max = 620, quality = 0.72) {
   });
 }
 
+/**
+ * La captura se guarda pequeña (620 px, cabe holgada en la base de datos) pero
+ * se LEE grande: a 620 px un pantallazo de iPhone se queda en 286 × 620 y la
+ * letra pequeña de la ficha (precio tachado, talla, nombre en dos líneas) le
+ * llega borrosa al lector. 1568 px de lado largo es lo que Claude aprovecha.
+ */
+const READ_MAX = 1568;
+const READ_QUALITY = 0.82;
+const READ_MAX_CHARS = 2_700_000; // el servidor admite 3 MB de cuerpo en /api/shot
+const LOW_CONFIDENCE = 0.5;       // por debajo, la lectura se enseña como dudosa
+const SHOT_BATCH_MAX = 10;        // capturas por tanda
+
+async function readableShot(file, stored) {
+  try {
+    let big = await downscale(file, READ_MAX, READ_QUALITY);
+    if (big.dataUrl.length > READ_MAX_CHARS) big = await downscale(file, 1280, 0.7);
+    return big.dataUrl.length > READ_MAX_CHARS ? stored : big;
+  } catch {
+    return stored;
+  }
+}
+
+/** La lectura ha salido con poca seguridad: se avisa en vez de darla por buena. */
+function showShotDoubt() {
+  const box = $('#addCheck');
+  box.innerHTML = '<b>No lo veo claro</b><br><span class="small">La captura no se lee bien (un aviso encima, texto cortado…). Revisa el nombre y el precio antes de guardar.</span>';
+  box.classList.remove('hidden');
+}
+
+/* Varias capturas de una vez: se leen de una en una. Al guardar una (o saltarla)
+   se abre la siguiente sin cerrar la hoja. */
+function clearShotQueue() {
+  session.shotQueue = [];
+  session.shotTotal = 0;
+  const box = $('#addQueue');
+  if (box) box.classList.add('hidden');
+}
+
+function showShotQueue() {
+  const box = $('#addQueue');
+  const left = (session.shotQueue || []).length;
+  const total = session.shotTotal || 0;
+  if (total < 2) { box.classList.add('hidden'); return; }
+  box.innerHTML = `<b>Captura ${total - left} de ${total}</b>` +
+    (left ? ` <button class="btn btn--sm btn--ghost" style="margin-left:8px" data-skip-shot>Saltar esta</button>` : '');
+  box.classList.remove('hidden');
+  box.querySelector('[data-skip-shot]')?.addEventListener('click', () => { nextShot(); });
+}
+
+function handleShots(fileList) {
+  const files = Array.from(fileList || []).filter((f) => f && f.type && f.type.startsWith('image/'));
+  if (!files.length) return;
+  if (files.length > SHOT_BATCH_MAX) toast(`Leo las ${SHOT_BATCH_MAX} primeras; el resto, en otra tanda`);
+  const batch = files.slice(0, SHOT_BATCH_MAX);
+  session.shotQueue = batch.slice(1);
+  session.shotTotal = batch.length;
+  handleShot(batch[0]);
+}
+
+/** Pasa a la siguiente captura de la tanda; false si no queda ninguna. */
+function nextShot() {
+  const next = (session.shotQueue || []).shift();
+  if (!next) { clearShotQueue(); return false; }
+  const total = session.shotTotal;
+  resetAdd();
+  session.shotTotal = total;
+  setTab('shot');
+  handleShot(next);
+  return true;
+}
+
 function guessFromText(text) {
   const lines = String(text || '')
     .split('\n').map((l) => l.replace(/\s+/g, ' ').trim()).filter((l) => l.length > 2);
@@ -1069,16 +1154,20 @@ async function handleShot(file) {
   fill.style.width = '10%';
   setLoading(true, 'Leyendo la captura…');
   $('#addPreview').classList.add('hidden');
+  $('#addCheck').classList.add('hidden');
+  showShotQueue();
 
   let shot;
   try { shot = await downscale(file); } catch { setLoading(false); bar.classList.add('hidden'); return showAddError('No hemos podido leer esa imagen'); }
+  // `shot` es la foto que se guarda; `read`, la misma captura a más resolución para leerla
+  const read = await readableShot(file, shot);
   fill.style.width = '30%';
 
   // 1) ¿hay un QR o un código de barras en la imagen?
   try {
     await loadScript(CDN.zxing);
     const reader = new window.ZXing.BrowserMultiFormatReader();
-    const result = await reader.decodeFromImageUrl(shot.dataUrl).catch(() => null);
+    const result = await reader.decodeFromImageUrl(read.dataUrl).catch(() => null);
     if (result) {
       bar.classList.add('hidden');
       setLoading(false);
@@ -1089,15 +1178,19 @@ async function handleShot(file) {
 
   // 2) Claude lee la captura en el servidor (si está activado). Si no lo está
   //    o falla, el OCR del móvil sigue siendo el plan B.
-  let guess = { url: '', priceText: '', title: '', shop: '', note: '' };
+  let guess = { url: '', priceText: '', title: '', shop: '', note: '', color: '', size: '' };
   let readByAi = false;
+  let confidence = 1;
   try {
     setLoading(true, 'Leyendo la captura…');
-    const ai = await api('/shot', { method: 'POST', body: { image: shot.dataUrl, hint: { title: keep.title || '', shop: keep.shop || '' } } });
+    const ai = await api('/shot', { method: 'POST', body: { image: read.dataUrl, hint: { title: keep.title || '', shop: keep.shop || '' } } });
     if (ai && (ai.title || ai.priceText)) {
       readByAi = true;
+      confidence = Number.isFinite(ai.confidence) ? ai.confidence : 1;
       guess = {
         url: ai.url || '', priceText: ai.priceText || '', title: ai.title || '', shop: ai.shop || '',
+        // color y talla se guardan como campos; la nota los sigue enseñando para poder corregirlos
+        color: ai.color || '', size: ai.size || '',
         note: [ai.color, ai.size].filter(Boolean).join(' · '),
       };
     }
@@ -1110,10 +1203,10 @@ async function handleShot(file) {
   if (!readByAi) try {
     setLoading(true, 'Reconociendo el texto…');
     await loadScript(CDN.tesseract);
-    const { data } = await window.Tesseract.recognize(shot.dataUrl, 'spa+eng', {
+    const { data } = await window.Tesseract.recognize(read.dataUrl, 'spa+eng', {
       logger: (m) => { if (m.status === 'recognizing text') fill.style.width = `${45 + m.progress * 45}%`; },
     });
-    guess = guessFromText(data.text || '');
+    guess = { ...guess, ...guessFromText(data.text || '') };
   } catch { /* sin OCR: la captura sigue valiendo como foto */ }
   fill.style.width = '95%';
 
@@ -1124,7 +1217,7 @@ async function handleShot(file) {
       const data = await api('/extract', { method: 'POST', body: { url: guess.url } });
       bar.classList.add('hidden');
       setLoading(false);
-      return showPreview({ ...data, source: 'shot' });
+      return showPreview({ ...data, color: guess.color, size: guess.size, source: 'shot' });
     } catch { /* seguimos con lo que sacó el OCR */ }
   }
 
@@ -1137,9 +1230,15 @@ async function handleShot(file) {
     image: shot.dataUrl,
     url: keep.url || guess.url,
     note: guess.note || '',
+    color: guess.color || '',
+    size: guess.size || '',
     source: 'shot',
   });
-  toast(readByAi ? 'Captura leída ✦ revisa y guarda' : guess.title || guess.priceText ? 'Datos leídos de la captura' : 'Revisa los datos y guarda');
+  const doubtful = readByAi && confidence < LOW_CONFIDENCE;
+  if (doubtful) showShotDoubt();
+  toast(doubtful ? 'No lo veo claro: revisa los datos'
+    : readByAi ? 'Captura leída ✦ revisa y guarda'
+      : guess.title || guess.priceText ? 'Datos leídos de la captura' : 'Revisa los datos y guarda');
 }
 
 /* ------------------------------------------------------ detalle producto */
@@ -1326,7 +1425,7 @@ async function deleteItem() {
           body: {
             title: item.title, url: item.url, image: item.image, priceText: item.priceText,
             priceValue: item.priceValue, currency: item.currency, shop: item.shop,
-            note: item.note, source: item.source,
+            note: item.note, color: item.color, size: item.size, source: item.source,
           },
         });
         await refreshList();
@@ -2250,7 +2349,7 @@ $('#btnManual').addEventListener('click', () => {
 });
 $('#btnSaveItem').addEventListener('click', saveItem);
 $('#btnScanToggle').addEventListener('click', () => (session.scanner ? stopScanner() : startScanner()));
-$('#shotInput').addEventListener('change', (e) => handleShot(e.target.files[0]));
+$('#shotInput').addEventListener('change', (e) => { handleShots(e.target.files); e.target.value = ''; });
 // Zalando y otras apps comparten el producto como imagen, no como enlace.
 // En iPhone no se puede recibir ese "compartir" directamente, así que el
 // camino corto es copiar la imagen y pegarla aquí.
@@ -2276,7 +2375,7 @@ $('#photoInput').addEventListener('change', (e) => attachPhoto(e.target.files[0]
 }));
 ['dragleave', 'drop'].forEach((t) => $('#dropZone').addEventListener(t, (e) => {
   e.preventDefault(); $('#dropZone').classList.remove('is-hot');
-  if (t === 'drop') handleShot(e.dataTransfer?.files?.[0]);
+  if (t === 'drop') handleShots(e.dataTransfer?.files);
 }));
 
 // Al copiar desde la app de una tienda (Zalando, por ejemplo) el portapapeles

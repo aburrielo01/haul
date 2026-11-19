@@ -316,10 +316,10 @@
       <label class="drop" id="dropZone" for="shotInput">
         <div class="empty__emoji" style="background:var(--sky)">▣</div>
         <h3 class="title">Sube una captura</h3>
-        <p class="lead" style="margin-top:6px">Leemos el código, el texto y el precio de la imagen. La foto se queda como imagen del producto.</p>
+        <p class="lead" style="margin-top:6px">Leemos el código, el texto y el precio de la imagen. La foto se queda como imagen del producto. Puedes elegir varias a la vez.</p>
         <span class="chip chip--lime" style="margin-top:12px">elegir imagen</span>
       </label>
-      <input type="file" id="shotInput" accept="image/*" class="hidden">
+      <input type="file" id="shotInput" accept="image/*" multiple class="hidden">
       <button class="btn btn--sm btn--block" style="margin-top:8px" id="btnPasteImage">Pegar imagen copiada</button>
       <div class="progress hidden" id="shotProgress"><span></span></div>
       <p class="small faint" style="margin-top:8px">Vale cualquier imagen: lo que comparte Zalando, una captura de TikTok o una foto de la etiqueta.</p>
@@ -333,6 +333,10 @@
     <div class="alert alert--error hidden" id="addError"></div>
     <!-- la misma pieza ya está en la lista -->
     <div class="alert alert--dup hidden" id="addDup"></div>
+    <!-- varias capturas de una tanda: cuál toca y saltarla -->
+    <div class="alert alert--info hidden" id="addQueue"></div>
+    <!-- la captura se ha leído con poca seguridad -->
+    <div class="alert alert--info hidden" id="addCheck"></div>
 
     <!-- vista previa editable -->
     <div id="addPreview" class="hidden" style="margin-top:16px">

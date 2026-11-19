@@ -27,6 +27,9 @@ const INDEX_FILE = path.join(PUBLIC_DIR, 'index.html');
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
+// La captura que se manda a leer va a más resolución que la que se guarda
+// (4.1.3): esa ruta admite un cuerpo mayor; el resto sigue en 1 MB.
+app.use('/api/shot', express.json({ limit: '3mb' }));
 app.use(express.json({ limit: '1mb' })); // las capturas viajan en base64
 
 /* ------------------------------------------------------------ seguridad */
@@ -101,6 +104,9 @@ function publicItem(it) {
     currency: it.currency,
     shop: it.shop,
     note: it.note,
+    // color y talla leídos de la captura o escritos a mano (v4.1.3)
+    color: it.color || '',
+    size: it.size || '',
     source: it.source,
     bought: !!Number(it.bought),
     addedBy: it.added_by,
@@ -144,6 +150,7 @@ app.get('/api/health', async (_req, res) => res.json({
   uptime: Math.round(process.uptime()),
   unlocker: extract.unlockerEnabled(),
   unlockerUsage: extract.unlockerStats(),
+  browser: extract.browserStats(),
   watch: watch.stats(),
   push: push.enabled(),
   ai: ai.stats(),
@@ -268,6 +275,8 @@ app.post('/api/lists/:slug/items', limitWrite, async (req, res) => {
       currency: body.currency,
       shop: body.shop,
       note: body.note,
+      color: body.color,
+      size: body.size,
       source: body.source,
       addedBy: role === 'owner' ? '' : String(body.addedBy || '').trim(),
     });
@@ -289,6 +298,8 @@ app.patch('/api/lists/:slug/items/:id', limitWrite, async (req, res) => {
     if (b.title !== undefined) patch.title = String(b.title).slice(0, 180);
     if (b.note !== undefined) patch.note = String(b.note).slice(0, 280);
     if (b.shop !== undefined) patch.shop = String(b.shop).slice(0, 60);
+    if (b.color !== undefined) patch.color = String(b.color).replace(/\s+/g, ' ').trim().slice(0, 40);
+    if (b.size !== undefined) patch.size = String(b.size).replace(/\s+/g, ' ').trim().slice(0, 20);
     if (b.image !== undefined) patch.image = String(b.image).slice(0, 400_000);
     if (b.bought !== undefined) patch.bought = b.bought ? 1 : 0;
     if (b.priceText !== undefined) {

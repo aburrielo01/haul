@@ -1,5 +1,43 @@
 # Cambios
 
+## 4.1.3 · 19 de noviembre de 2026
+
+### Capturas: se leen mejor y dicen cuándo no se fían
+
+- **La captura se lee a más resolución.** El móvil reducía la imagen a 620 px
+  de lado largo (286 × 620 en un iPhone) y esa misma era la que leía Claude: la
+  letra pequeña de la ficha llegaba borrosa. Ahora se mandan dos tamaños: la
+  de 620 px se sigue guardando como foto y otra de 1568 px va a leerse (también
+  para el código de barras y el OCR de respaldo). `/api/shot` admite hasta
+  3 MB de cuerpo; el resto de rutas sigue en 1 MB. Cuesta unos 1.300 tokens
+  más por captura (céntimos de céntimo con Haiku).
+- **Lectura dudosa.** El servidor ya devolvía `confidence` y la app no la
+  usaba. Por debajo de 0,5 la hoja avisa «No lo veo claro» y pide revisar
+  nombre y precio, en vez de «Captura leída ✦».
+- **Color y talla como campos propios** (`items.color`, `items.size`): se
+  guardan al añadir por captura y se pueden corregir por `PATCH`. La nota los
+  sigue enseñando para poder editarlos a mano. Las bases que ya existen
+  reciben las dos columnas al arrancar.
+- **Varias capturas a la vez** (hasta 10): se leen de una en una; al guardar
+  una, la hoja sigue abierta con la siguiente («Captura 2 de 3») y se puede
+  saltar la que no interese.
+- **La prueba mide lo que manda el móvil.** `test/ai.js` comprueba que las
+  capturas de `test/shots/` no son mayores que lo que envía la app y que el
+  tope del lector admite ese tamaño.
+
+### Chromium de uno en uno
+
+- Las lecturas que necesitan navegador hacen cola (`BROWSER_CONCURRENCY`, 1 por
+  defecto). Con dos páginas a la vez la instancia de Render se reinició en el
+  banco del 8 nov; con varios testers añadiendo enlaces difíciles a la vez
+  habría pasado lo mismo. Si la cola está llena (`BROWSER_QUEUE_MAX`, 8) o la
+  espera pasa de `BROWSER_WAIT_MS` (40 s), esa lectura sigue sin navegador con
+  lo que haya sacado el resto de la cascada.
+- `/api/health` → `browser`: huecos, ocupados, en espera, servidas, las que se
+  quedaron fuera y la espera más larga.
+- Pruebas: `npm run test:queue` (turno, tope y espera, sin abrir navegador) y
+  `test/smoke.js` con los campos nuevos y el límite de `/api/shot`.
+
 ## 4.1.2 · 15 de noviembre de 2026
 
 ### El Atajo de iPhone, por fin con el enlace

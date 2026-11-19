@@ -134,6 +134,9 @@ van en el panel *Environment* del servicio.
 | `NAV_TIMEOUT` | Espera máxima de Chromium (ms) | `18000` |
 | `FETCH_TIMEOUT` | Espera máxima de la lectura rápida (ms) | `8000` |
 | `BROWSER_WS_ENDPOINT` | Chromium remoto (CDP) si el hosting no puede ejecutarlo | — |
+| `BROWSER_CONCURRENCY` | Páginas de Chromium abiertas a la vez; las demás lecturas hacen cola | `1` |
+| `BROWSER_QUEUE_MAX` | Lecturas esperando navegador como mucho; con la cola llena siguen sin él | `8` |
+| `BROWSER_WAIT_MS` | Espera máxima en esa cola (ms) | `40000` |
 | `BRIGHTDATA_API_KEY` | Clave de Bright Data para tiendas con anti-bot | — |
 | `BRIGHTDATA_UNLOCKER_ZONE` | Nombre de la zona Web Unlocker | — |
 | `UNLOCKER_COUNTRY` | País desde el que se leen las tiendas | `es` |

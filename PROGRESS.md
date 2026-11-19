@@ -1,7 +1,8 @@
 # PROGRESS.md · HAUL
 
-Última actualización: 15 de noviembre de 2026. En vivo: 4.1.1. En local,
-probada y sin subir: 4.1.2 (Atajo corregido y probado en el Mac).
+Última actualización: 19 de noviembre de 2026. En vivo: 4.1.2 (comprobado en
+`/api/health` el 19 nov). Preparada y sin subir: 4.1.3 (capturas y cola de
+Chromium).
 
 ## Hecho
 - **v4.0** (24–26 oct): vigilancia de precios con avisos push opcionales,
@@ -31,7 +32,19 @@ probada y sin subir: 4.1.2 (Atajo corregido y probado en el Mac).
 - **4.1.0 · guía iPhone** (7 nov): el camino sin instalar nada (Copiar → Haul →
   Pegar) va primero; el Atajo queda como opción de dos toques.
 
+- **4.1.3 · capturas y cola** (19 nov, sin subir): la captura se lee a
+  1568 px y se guarda a 620; aviso de lectura dudosa por debajo de 0,5 de
+  confianza; color y talla como campos; hasta 10 capturas por tanda; Chromium
+  de uno en uno con cola. Probado: todas las pruebas del repo, la migración
+  sobre una base con el esquema anterior y el flujo de captura en un Chromium
+  de verdad con el lector simulado (1568 px enviados, aviso, tanda de 3 con
+  guardar y saltar). Sin probar: lectura real con clave y en un iPhone.
+
 ## Pendiente
+- **Subir la 4.1.3** y comprobar en el iPhone una captura con letra pequeña
+  (precio tachado y rebajado). Camino a la beta, paso a paso, en la checklist
+  del proyecto (`claude/estado-beta.md` y el doc «Haul · checklist para la
+  beta»).
 - **Banco en Render**: pasada 1 (8 nov) = 79 %; analizada fallo a fallo
   (`test/banco-estado.md`): 10 precios cambiados por Black Friday (lector
   correcto, hoja actualizada), 3 fichas retiradas (sustituidas; el lector

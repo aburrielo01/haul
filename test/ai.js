@@ -24,6 +24,26 @@ async function ok(name, fn) {
   catch (err) { console.log('  ✗', name, '→', err.message); process.exitCode = 1; }
 }
 
+// Lado largo al que la app reduce la captura antes de mandarla a leer (public/app.js → READ_MAX).
+const READ_MAX = 1568;
+
+/** Ancho y alto de un JPEG o PNG leyendo solo la cabecera (sin dependencias). */
+function imageSize(buf) {
+  if (buf.length > 24 && buf.readUInt32BE(0) === 0x89504e47) return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+  if (buf.length > 4 && buf[0] === 0xff && buf[1] === 0xd8) {
+    let i = 2;
+    while (i + 9 < buf.length) {
+      if (buf[i] !== 0xff) { i++; continue; }
+      const marker = buf[i + 1];
+      if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+        return { width: buf.readUInt16BE(i + 7), height: buf.readUInt16BE(i + 5) };
+      }
+      i += 2 + buf.readUInt16BE(i + 2);
+    }
+  }
+  return null;
+}
+
 const PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 
 function fakeClient(answer, { stop = 'end_turn' } = {}) {
@@ -116,6 +136,30 @@ function fakeClient(answer, { stop = 'end_turn' } = {}) {
     assert.strictEqual(s.model, process.env.AI_MODEL || 'claude-haiku-5-5');
   });
 
+  await ok('las capturas de prueba miden lo que manda el móvil y la prueba lee su tamaño', () => {
+    const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.js'), 'utf8');
+    const m = app.match(/const READ_MAX = (\d+);/);
+    assert.ok(m, 'no encuentro READ_MAX en public/app.js');
+    assert.strictEqual(Number(m[1]), READ_MAX, 'READ_MAX de la app y de la prueba no coinciden');
+    const dir = path.join(__dirname, 'shots');
+    const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => /\.(jpe?g|png)$/i.test(f)) : [];
+    for (const f of files) {
+      const dim = imageSize(fs.readFileSync(path.join(dir, f)));
+      assert.ok(dim && dim.width > 0 && dim.height > 0, `no leo el tamaño de ${f}`);
+      assert.ok(Math.max(dim.width, dim.height) <= READ_MAX * 1.05, `${f} es mayor de lo que envía el móvil (${dim.width}×${dim.height})`);
+    }
+  });
+
+  await ok('una captura a resolución de lectura cabe en el tope del lector', async () => {
+    const fake = fakeClient({ title: 'X', price: 1, currency: 'EUR', shop: '', url: '', color: '', size: '', confidence: 0.9 });
+    ai._setClient(fake);
+    ai._reset(); // las pruebas anteriores agotaron el tope del día
+    const before = fake.calls.length;
+    assert.ok(await ai.readShot('data:image/jpeg;base64,' + 'B'.repeat(1_600_000)), 'rechazó 1,6 MB');
+    assert.strictEqual(fake.calls.length, before + 1);
+    assert.strictEqual(await ai.readShot('data:image/jpeg;base64,' + 'C'.repeat(3_000_000)), null, 'aceptó más de 2,9 MB');
+  });
+
   // Lectura real, solo con clave de verdad y capturas en test/shots/
   const shotsDir = path.join(__dirname, 'shots');
   const shots = REAL_KEY && fs.existsSync(shotsDir) ? fs.readdirSync(shotsDir).filter((f) => /\.(jpe?g|png|webp)$/i.test(f)) : [];
@@ -125,6 +169,14 @@ function fakeClient(answer, { stop = 'end_turn' } = {}) {
     for (const f of shots) {
       await ok(`lectura real de ${f}`, async () => {
         const buf = fs.readFileSync(path.join(shotsDir, f));
+        // La app manda la captura a READ_MAX px de lado largo (public/app.js). Una
+        // prueba con una imagen mayor mediría una calidad que producción no tiene.
+        const dim = imageSize(buf);
+        if (dim) {
+          const long = Math.max(dim.width, dim.height);
+          assert.ok(long <= READ_MAX * 1.05, `${f} mide ${dim.width}×${dim.height}: redúcela a ${READ_MAX} px de lado largo, que es lo que envía el móvil`);
+          if (long < 900) console.log(`      · ${f} mide ${dim.width}×${dim.height}: más pequeña de lo que envía el móvil; la lectura real puede salir mejor que aquí`);
+        }
         const type = /\.png$/i.test(f) ? 'image/png' : /\.webp$/i.test(f) ? 'image/webp' : 'image/jpeg';
         const t = Date.now();
         const got = await ai.readShot(buf.toString('base64'), { mediaType: type });

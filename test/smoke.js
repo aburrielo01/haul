@@ -91,6 +91,24 @@ async function call(path, { method = 'GET', body, token } = {}) {
     JSON.stringify(bought.data));
   check('un precio corregido a mano es la nueva referencia', bought.data.item.basePrice === 75.5 && bought.data.item.prevPrice === null && bought.data.item.lowPrice === 75.5);
 
+  // v4.1.3: color y talla como campos propios
+  const sized = await call(`/api/lists/${slug}/items`, {
+    method: 'POST', token: owner,
+    body: { title: 'Club C 85', shop: 'Zalando', source: 'shot', color: '  off-white ', size: '42', note: 'off-white · 42' },
+  });
+  check('guarda color y talla como campos', sized.status === 201 && sized.data.item.color === 'off-white' && sized.data.item.size === '42', JSON.stringify(sized.data));
+  check('una pieza sin color ni talla los devuelve vacíos', item.data.item.color === '' && item.data.item.size === '');
+  const resized = await call(`/api/lists/${slug}/items/${sized.data.item?.id}`, { method: 'PATCH', token: owner, body: { size: '43' } });
+  check('la talla se puede corregir sin tocar el color', resized.status === 200 && resized.data.item.size === '43' && resized.data.item.color === 'off-white', JSON.stringify(resized.data));
+  await call(`/api/lists/${slug}/items/${sized.data.item?.id}`, { method: 'DELETE', token: owner });
+
+  // v4.1.3: la captura para leer va a más resolución; /api/shot admite hasta 3 MB
+  const bigShot = await call('/api/shot', { method: 'POST', body: { image: 'data:image/jpeg;base64,' + 'A'.repeat(1_600_000) } });
+  check('una captura de 1,6 MB ya no se rechaza por tamaño', bigShot.status !== 413, 'status ' + bigShot.status);
+  const hugeShot = await call('/api/shot', { method: 'POST', body: { image: 'data:image/jpeg;base64,' + 'A'.repeat(3_400_000) } });
+  check('una de más de 3 MB sí', hugeShot.status === 413, 'status ' + hugeShot.status);
+  check('la salud enseña la cola del navegador', health.data.browser && health.data.browser.slots >= 1 && health.data.browser.busy === 0, JSON.stringify(health.data.browser));
+
   const pushCfg = await call('/api/push/config');
   check('la configuración de avisos responde', pushCfg.status === 200 && typeof pushCfg.data.enabled === 'boolean');
   if (pushCfg.data.enabled) {
