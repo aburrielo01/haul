@@ -179,3 +179,32 @@ Fallos que quedan (14 con las reglas nuevas):
 | Verificador y lector no coinciden (Temu enseña varios precios por talla) | E061 Temu |
 | Desbloqueador vacío o tiempo agotado | E017 Primark, E059/E060 AliExpress, E062 Temu |
 | Cuenta de Bright Data sin verificar (KYC) | E069, E070 Depop |
+
+### Pasada 4 (22 nov, 4.1.5, 35 min): 88 %, ya sin confirmaciones falsas
+
+Verificador: 15 precios movidos confirmados (Mango 59,99 → 39,99 entre ellos;
+Game E090 entra con la confianza 0,4). Fallos: Shein ×2, Primark, Pompeii ×2,
+Amazon, AliExpress ×2, Temu, Depop ×2, Samsung. Investigados en local:
+
+- Pompeii ×2: el lector acertaba (125,00 y 79,00); Claude dio 153 y 95, cifras
+  que no estaban en la página. 4.1.6: el precio tiene que estar en el texto.
+- Amazon: precio a 14.000 caracteres, fuera de la ventana. 4.1.6: ventana
+  anclada en el nombre con precio cerca.
+- Samsung: el lector acertaba (1.143 €, comprobado en el navegador); el precio
+  solo existe tras el JavaScript. Hoja actualizada a mano.
+- Shein: el desbloqueador sirve la misma ficha en inglés o en español y con
+  precios que no cuadran entre lecturas (55,88 € en una, 14,98 € en otra). E016
+  sustituida por una ficha con número de producto. Tienda inestable.
+
+Con la 4.1.6 y la hoja, la pasada 4 habría dado 92/100 (proyección: Pompeii ×2,
+Amazon y Samsung). Lo que queda: Shein E015, Primark, AliExpress ×2, Temu ×1-2
+y Depop ×2 (KYC de Bright Data).
+
+### Pasada 5 (22 nov, 4.1.5, 31 min): 88 %
+
+Tercera pasada seguida en 88 % (3: 88 real 86, 4: 88, 5: 88): el lector está
+estable. Verificador: 17 precios movidos confirmados. Fallos: Shein ×2,
+Primark, New Balance (esta vez), Pompeii ×2 (verificador, arreglado en 4.1.6),
+AliExpress ×2, Temu, Depop ×2, Samsung (hoja corregida en 4.1.6). Con la
+4.1.6 y la hoja nueva: 91 % proyectado, más lo que sume la Shein sustituida.
+Desbloqueador hoy: 136 de 300 intentos (tope diario de HAUL).

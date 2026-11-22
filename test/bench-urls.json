@@ -145,12 +145,12 @@
  {
   "id": "E016",
   "shop": "Shein",
-  "url": "https://es.shein.com/Zorclune-Men-s-Long-Sleeve-Crew-Neck-T-Shirt-Black-And-White-Color-Block-Raglan-Sleeve-Handwritten-English-Print-Loose-Fit-p-507712330.html?imgRatio=3-4&detailBusinessFrom=0-1_507712330%7C0-2&src_identifier=fc%3DMen%20Clothing%60sc%3DMen%20Clothing%60tc%3D0%60oc%3D0%60ps%3Dtab06navbar06%60jc%3DitemPicking_017172963&src_module=topcat&src_tab_page_id=page_goods_detail1791450711250&mallCode=1&pageListType=4",
-  "title": "Zorclune Camiseta de manga larga cuello redondo para hombre, bloques de color negro y",
-  "price": 14.99,
+  "url": "https://es.shein.com/ESTAVOR-Men-s-Black-Slim-Fit-Long-Sleeve-T-Shirt-p-564226151.html",
+  "title": "ESTAVOR Slim Fit",
+  "price": 36.25,
   "currency": "EUR",
-  "note": "\"desde\" 14,99 con varias opciones (25 oct; era 13,99)",
-  "verified": "2026-10-25"
+  "note": "Sustituye al enlace sin número de producto, que Shein ya resolvía a otra camiseta (INCRYTM). Precio leído por Render el 22 nov; sin comprobar a mano (captcha). Nombre corto a propósito: Shein lo sirve en inglés o en español según la lectura",
+  "verified": ""
  },
  {
   "id": "E017",
@@ -924,10 +924,10 @@
   "shop": "Samsung",
   "url": "https://www.samsung.com/es/smartphones/galaxy-z-flip8/buy/",
   "title": "Galaxy Z Flip8",
-  "price": 1299,
+  "price": 1143,
   "currency": "EUR",
-  "note": "Samsung: «desde 1.299 €» (256 GB); la promo de 1129 terminó",
-  "verified": "2026-11-08"
+  "note": "Samsung: 256 GB a 1.143 € (Black Friday, -156 €). El precio solo aparece al cargar la página con JavaScript: el verificador no lo ve, se comprueba a mano",
+  "verified": "2026-11-22"
  },
  {
   "id": "E093",

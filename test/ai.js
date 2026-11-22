@@ -142,6 +142,26 @@ function fakeClient(answer, { stop = 'end_turn' } = {}) {
     assert.ok(!prompt.includes('99.99'), 'el JSON-LD del lector no se le enseña');
   });
 
+  await ok('la ventana se ancla en el nombre que lleva un precio cerca, no en el de la pestaña ni en los menús', () => {
+    const nav = 'Apple MacBook Air en el menú y en las migas. ' + 'Ofertas Libros Hogar Moda '.repeat(800);
+    const text = 'Apple MacBook Air M5 | Amazon\n' + nav + ' Apple MacBook Air M5 15 pulgadas Comprar nuevo 1.655,00€ Añadir a la cesta ' + 'reseñas '.repeat(300);
+    const w = ai.productWindow(text, 'Apple MacBook Air M5');
+    assert.ok(w.includes('1.655,00'), 'la ventana llega al precio del producto');
+  });
+
+  await ok('el precio del verificador tiene que estar escrito en la página; si no, se lo ha inventado', async () => {
+    assert.strictEqual(ai.priceInText(125, 'ROAST 125,00€ 179,00€'), true);
+    assert.strictEqual(ai.priceInText(1655, 'nuevo 1.655,00€'), true);
+    assert.strictEqual(ai.priceInText(153, 'ROAST 125,00€ 179,00€'), false);
+    assert.strictEqual(ai.priceInText(5, '15,00 €'), false);
+    ai._reset();
+    ai._setClient(fakeClient({ title: 'VEGA LEATHER MULTI ROAST', price: 153, currency: 'EUR', shop: 'Pompeii', url: '', color: '', size: '', confidence: 0.9 }));
+    const html = '<html><head><title>VEGA</title></head><body>' + 'Collections '.repeat(40) + '<h1>VEGA LEATHER MULTI ROAST</h1><p>125,00€ 179,00€</p>' + 'texto '.repeat(60) + '</body></html>';
+    const got = await ai.verifyPrice({ html, url: 'https://pompeiibrand.com/products/vega', title: 'VEGA LEATHER MULTI ROAST' });
+    assert.strictEqual(got.price, null);
+    assert.strictEqual(got.invented, 153);
+  });
+
   await ok('el gasto estimado del día sale en las estadísticas', () => {
     const s = ai.stats();
     assert.strictEqual(typeof s.today.usd, 'number');

@@ -1,5 +1,33 @@
 # Cambios
 
+## 4.1.6 · 22 de noviembre de 2026
+
+### El verificador, sin inventos
+
+La pasada 4 (88 %, ya con los frenos de la 4.1.5) dejó tres filas que el
+verificador debía haber confirmado y no confirmó:
+
+- **Pompeii**: Claude contestó 153 € y 95 € en páginas que decían 125,00 € y
+  79,00 €. Ninguna de esas cifras estaba en el texto: se las inventó. Ahora el
+  precio del verificador **tiene que estar escrito en la página** (1.655,00,
+  1655,00, 98,99, 98.99…); si no, no cuenta y el informe lo anota.
+- **Amazon**: el precio estaba en el texto, pero a 14.000 caracteres; la
+  ventana se anclaba en la primera vez que salía el nombre (menús, migas). Ahora
+  se ancla en la primera aparición del nombre con un precio en los 1.500
+  caracteres siguientes, sin contar el título de la pestaña, y es de 16.000.
+- El texto visible separa los bloques («Plus 2» + «169,99 €» ya no es
+  «Plus 2169,99 €») sin partir los precios que van en varias etiquetas.
+
+Probado en real con las páginas guardadas: Pompeii 125 y 79, Amazon 1.655,
+confirmados; Samsung, sin precio en el texto (lo pinta con JavaScript), no se
+confirma, como debe ser.
+
+### Hoja
+
+- E092 Samsung: 1.143 € comprobado a mano en el navegador (Black Friday).
+- E016 Shein: el enlace no llevaba número de producto y Shein lo resolvía a
+  otra camiseta; sustituido por una ficha con número (`-p-564226151`).
+
 ## 4.1.5 · 22 de noviembre de 2026
 
 ### El verificador del banco, con dos frenos
