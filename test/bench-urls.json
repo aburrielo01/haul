@@ -626,7 +626,8 @@
   "currency": "EUR",
   "note": "Etsy: -20 % hasta el 23 nov; luego vuelve a ~494,79",
   "tolerance": 0.03,
-  "verified": "2026-11-08"
+  "verified": "2026-11-08",
+  "ephemeral": true
  },
  {
   "id": "E064",
@@ -647,7 +648,8 @@
   "price": 8.5,
   "currency": "EUR",
   "note": "precio del artículo; con protección al comprador 9,63",
-  "verified": "2026-10-25"
+  "verified": "2026-10-25",
+  "ephemeral": true
  },
  {
   "id": "E066",
@@ -657,7 +659,8 @@
   "price": 89,
   "currency": "EUR",
   "note": "precio del artículo; con protección al comprador 94,15",
-  "verified": "2026-10-25"
+  "verified": "2026-10-25",
+  "ephemeral": true
  },
  {
   "id": "E067",
@@ -667,17 +670,19 @@
   "price": 30,
   "currency": "EUR",
   "note": "el vendedor lo bajó de 45 a 30 (25 oct)",
-  "verified": "2026-10-25"
+  "verified": "2026-10-25",
+  "ephemeral": true
  },
  {
   "id": "E068",
   "shop": "Wallapop",
-  "url": "https://es.wallapop.com/item/casco-arai-tour-x5-adventure-discovery-1317598074",
-  "title": "Casco Arai Tour-X5 Adventure Discovery",
-  "price": 425,
+  "url": "https://es.wallapop.com/item/soporte-gopro-arai-tour-x5-1326564354",
+  "title": "Soporte GoPro Arai Tour-X5",
+  "price": 7.5,
   "currency": "EUR",
-  "note": "Sustituye al anuncio vendido. Wallapop: los anuncios caducan, revisar si falla",
-  "verified": "2026-11-08"
+  "note": "Sustituye al casco vendido. Vendedor que fabrica (La Forja, perfil verificado): el anuncio debería durar",
+  "verified": "2026-11-22",
+  "ephemeral": true
  },
  {
   "id": "E069",
@@ -688,7 +693,8 @@
   "currency": "USD",
   "note": "precio rebajado (antes 181,49); agotado desde octubre; el nombre es el que Depop genera (alt de la foto); 25 oct, era 108,89",
   "tolerance": 0.03,
-  "verified": "2026-10-25"
+  "verified": "2026-10-25",
+  "ephemeral": true
  },
  {
   "id": "E070",
@@ -699,7 +705,8 @@
   "currency": "USD",
   "note": "",
   "tolerance": 0.03,
-  "verified": "2026-10-25"
+  "verified": "2026-10-25",
+  "ephemeral": true
  },
  {
   "id": "E071",

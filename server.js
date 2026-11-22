@@ -533,6 +533,9 @@ app.get('/api/bench/run', async (req, res) => {
     const { finished, ...out } = await bench.run({
       db, extract: extract.extractFromUrl, filter,
       fresh: req.query.fresh === '1',
+      // con clave de Anthropic, los fallos solo de precio los verifica Claude
+      verifier: ai.enabled() && req.query.verify !== '0' ? ai.verifyPrice : null,
+      retryTimeouts: req.query.retry !== '0',
       concurrency: req.query.concurrency ? Number(req.query.concurrency) : 1, // tope 2 en lib/bench
     });
     res.json({ ok: true, ...out });
@@ -556,8 +559,8 @@ function renderBenchHtml(state) {
     const g = r.grade;
     const cell = (v) => v ? '<td class="ok">✓</td>' : '<td class="ko">✗</td>';
     return `<tr>
-      <td>${esc(r.id)}</td><td>${esc(r.shop)}</td>
-      ${cell(g.title)}${cell(g.price)}${cell(g.image)}
+      <td>${esc(r.id)}${r.excluded ? ' <i title="no cuenta en el porcentaje">(vendido)</i>' : ''}${r.retried ? ' <i title="segunda oportunidad tras tiempo agotado">↻</i>' : ''}</td><td>${esc(r.shop)}</td>
+      ${cell(g.title)}${g.sheetStale ? '<td class="ok" title="precio confirmado por el verificador: la hoja estaba desfasada">✓ IA</td>' : cell(g.price)}${cell(g.image)}
       <td>${esc(g.mode || '')}</td>
       <td class="small">${esc(g.got ? g.got.title : (g.error || ''))}</td>
       <td class="small">${esc(g.got ? g.got.priceText : '')}${g.priceDiff ? ` <i>(±${g.priceDiff})</i>` : ''}</td>
@@ -590,12 +593,23 @@ ${s ? `<div class="kpis">
   <div class="kpi"><b>${s.failed}</b><span>errores</span></div>
 </div>
 ${s.unlocker && s.unlocker.tried ? `<p class="sub">Desbloqueador en los fallos: ${s.unlocker.tried} intentos · ${s.unlocker.ok} con ficha · ${s.unlocker.rejected} rechazados · ${s.unlocker.wall} muro · ${s.unlocker.empty} vacíos · ${s.unlocker.timeout} sin respuesta · ${s.unlocker.noBudget} sin cupo${s.unlocker.ok === 0 && s.unlocker.tried >= 5 ? ' — <b>ninguno acierta: revisa saldo y verificación de la cuenta de Bright Data</b>' : ''}</p>` : ''}
+${renderVerification(s)}
 ${state.consistency ? renderConsistency(state.consistency) : ''}
 ${s.truth ? `<p class="sub">Hoja de verdad: ${s.truth.verified}/${s.total} filas comprobadas a mano${s.truth.newest ? `, la más reciente el ${esc(s.truth.newest)}` : ''}${s.truth.oldest && s.truth.oldest !== s.truth.newest ? ` y la más antigua el ${esc(s.truth.oldest)}` : ''}. Los precios cambian: un fallo de precio con nombre y foto correctos suele ser la hoja, no el lector.</p>` : ''}` : '<p>Todavía no hay resultados.</p>'}
 <div class="two">
   <div><h3>Por tienda</h3><table><tr><th>tienda</th><th>ok</th></tr>${shops}</table></div>
   <div><h3>Detalle</h3><table><tr><th>id</th><th>tienda</th><th>nombre</th><th>precio</th><th>foto</th><th>vía</th><th>leído</th><th>precio leído</th><th>esperado</th><th>t</th><th>hist.</th></tr>${rows}</table></div>
 </div>`;
+}
+
+/** A la primera / con reintento, precios que confirmó Claude y anuncios vendidos. */
+function renderVerification(s) {
+  if (!s) return '';
+  const parts = [];
+  if (s.firstTry) parts.push(`A la primera: <b>${s.firstTry.pct}%</b>${s.retried ? ` · con segunda oportunidad a ${s.retried} tiempos agotados: <b>${s.pctOk}%</b> (${s.recoveredByRetry} recuperados)` : ''}.`);
+  if (s.sheetStale && s.sheetStale.length) parts.push(`Precios confirmados por el verificador (la hoja estaba vieja): ${s.sheetStale.map((x) => `${esc(x.id)} ${esc(x.shop)} ${x.sheet} → ${x.page}`).join(' · ')}.`);
+  if (s.excluded && s.excluded.length) parts.push(`No cuentan (anuncio vendido, toca sustituirlo): ${s.excluded.map((x) => `${esc(x.id)} ${esc(x.shop)}`).join(' · ')}.`);
+  return parts.length ? `<p class="sub">${parts.join('<br>')}</p>` : '';
 }
 
 /** "¿Está al 92 % de forma consistente?": las últimas pasadas completas y los enlaces que bailan. */

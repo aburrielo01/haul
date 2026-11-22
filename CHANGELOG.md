@@ -1,5 +1,47 @@
 # Cambios
 
+## 4.1.4 · 22 de noviembre de 2026
+
+### Junta las dos ramas
+
+- Lleva dentro la **4.1.3 del 19 nov** (capturas a más resolución, aviso de
+  lectura dudosa, color y talla, varias capturas, Chromium de uno en uno), que
+  ya estaba en Render pero no en la carpeta del Mac. Este trabajo del banco se
+  hizo sobre la 4.1.2 y se llamaba 4.1.3; se fusionó con la base 4.1.2 de
+  `haul-v4.0-para-github 4` sin conflictos.
+- Recupera la **guía del iPhone del 15 nov** (el Atajo primero, Copiar → Pegar
+  como alternativa), que no había llegado a GitHub: Render seguía enseñando la
+  guía anterior, la que decía «No uses Obtener URLs de la entrada».
+
+### Banco: medir al lector, no al mercado
+
+- **Verificador de precio con Claude.** Cuando nombre y foto aciertan pero el
+  precio no cuadra con la hoja, Claude lee el texto visible de la misma página
+  (sin el JSON-LD que usa el lector y sin saber qué precio leyó este) y dice
+  qué precio enseña. Si coincide con el del lector, la fila cuenta como
+  acierto y el informe propone el precio nuevo para la hoja (`✓ IA`); si no,
+  es fallo. El texto se recorta alrededor del nombre del producto, porque en
+  muchas tiendas los menús ocupan los primeros miles de caracteres. Probado en
+  real: Snipes, Sprinter y Zalando confirmados; en Sprinter, la primera versión
+  tomó el «precio de los últimos 30 días» y se corrigió en las instrucciones.
+- **Segunda oportunidad a los tiempos agotados**, solo en el banco y al final
+  de la pasada. El informe da las dos cifras: a la primera y con reintento.
+- **Anuncios de segunda mano** (`ephemeral` en la hoja: Wallapop, Vinted,
+  Depop, la pieza única de Etsy): si el lector los da por vendidos (`GONE`), no
+  cuentan en el porcentaje y el informe pide sustituirlos.
+- Wallapop E068: el casco sustituto también se vendió en una semana; ahora es
+  un soporte GoPro de un vendedor que fabrica.
+
+### Lector
+
+- La comprobación de Amazon («Haz clic en el botón de abajo para seguir
+  comprando») cuenta como muro: antes se guardaba una pieza «Amazon.es» sin
+  precio; ahora pasa al desbloqueador. Hoy la sirve tanto al Mac como a Render.
+- Las instrucciones de la IA excluyen los precios de referencia («últimos 30
+  días», «precio original», PVPR) en capturas, rescates y verificación.
+- El resultado del lector lleva el HTML leído como propiedad no enumerable:
+  lo usa el banco y nunca viaja al móvil, a la caché ni a un JSON.
+
 ## 4.1.3 · 19 de noviembre de 2026
 
 ### Capturas: se leen mejor y dicen cuándo no se fían
@@ -56,6 +98,9 @@
 - El service worker ya no guarda en caché `/atajo/`: el móvil instalaba la
   versión del Atajo que descargó la primera vez aunque el servidor tuviera
   otra.
+- La guía del iPhone pone el Atajo primero (confirmado por Alejandro desde
+  Zalando, Amazon y Safari) y deja Copiar → Pegar como alternativa sin
+  instalar nada. Quien lo instalara antes del 15 nov debe reinstalarlo.
 - `scripts/pasada-banco.sh`: lanza una pasada del banco en Render y la vigila
   (lee el token del `.env`, un solo lector).
 

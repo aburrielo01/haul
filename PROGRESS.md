@@ -1,8 +1,8 @@
 # PROGRESS.md · HAUL
 
-Última actualización: 19 de noviembre de 2026. En vivo: 4.1.2 (comprobado en
-`/api/health` el 19 nov). Preparada y sin subir: 4.1.3 (capturas y cola de
-Chromium).
+Última actualización: 22 de noviembre de 2026. En vivo: 4.1.3 (capturas y cola
+de Chromium, subida desde `~/Downloads/haul-4.1.3`). En local, sin subir: 4.1.4
+= 4.1.3 + verificador de precio del banco + guía del iPhone del 15 nov.
 
 ## Hecho
 - **v4.0** (24–26 oct): vigilancia de precios con avisos push opcionales,
@@ -31,26 +31,30 @@ Chromium).
   5 peticiones/minuto. La ficha abre la tienda por el enlace de afiliado.
 - **4.1.0 · guía iPhone** (7 nov): el camino sin instalar nada (Copiar → Haul →
   Pegar) va primero; el Atajo queda como opción de dos toques.
-
-- **4.1.3 · capturas y cola** (19 nov, sin subir): la captura se lee a
-  1568 px y se guarda a 620; aviso de lectura dudosa por debajo de 0,5 de
-  confianza; color y talla como campos; hasta 10 capturas por tanda; Chromium
-  de uno en uno con cola. Probado: todas las pruebas del repo, la migración
-  sobre una base con el esquema anterior y el flujo de captura en un Chromium
-  de verdad con el lector simulado (1568 px enviados, aviso, tanda de 3 con
-  guardar y saltar). Sin probar: lectura real con clave y en un iPhone.
+- **4.1.3 · capturas y cola** (19 nov, en Render): la captura se lee a 1568 px
+  y se guarda a 620; aviso «No lo veo claro» por debajo de 0,5 de confianza;
+  color y talla como campos; hasta 10 capturas por tanda; Chromium de uno en
+  uno con cola (`BROWSER_CONCURRENCY`). Se hizo fuera de esta carpeta y llegó
+  como zip a Descargas.
+- **4.1.4 · banco y fusión** (22 nov, en local): verificador de precio con
+  Claude, segunda oportunidad a los tiempos agotados, anuncios vendidos fuera
+  del cálculo, la comprobación de Amazon cuenta como muro. Fusionada con la
+  4.1.3 y con la guía del iPhone del 15 nov, que no había llegado a GitHub.
 
 ## Pendiente
-- **Subir la 4.1.3** y comprobar en el iPhone una captura con letra pequeña
-  (precio tachado y rebajado). Camino a la beta, paso a paso, en la checklist
-  del proyecto (`claude/estado-beta.md` y el doc «Haul · checklist para la
-  beta»).
-- **Banco en Render**: pasada 1 (8 nov) = 79 %; analizada fallo a fallo
-  (`test/banco-estado.md`): 10 precios cambiados por Black Friday (lector
-  correcto, hoja actualizada), 3 fichas retiradas (sustituidas; el lector
-  devuelve `GONE`), 8 de terceros. Con eso la pasada 1 habría dado 92 %.
-  Falta: subir la 4.1.1 y lanzar las pasadas 2, 3 y 4 el mismo día, con un
-  solo lector. El token está en `.env` (comprobado).
+- **Banco en Render**: pasadas 1 (79 %) y 2 (80 %) analizadas fallo a fallo
+  (`test/banco-estado.md`): el ruido es el mercado (9-10 precios movidos por
+  semana) y los tiempos agotados del desbloqueador. La 4.1.4 mide al lector
+  frente a la página de hoy: verificador con Claude para los fallos solo de
+  precio, segunda oportunidad a los tiempos agotados y anuncios vendidos fuera
+  del cálculo. Falta: subir la 4.1.4 y lanzar tres pasadas el mismo día.
+- **Capturas (4.1.3)**: probar en el iPhone una captura con letra pequeña
+  (precio tachado y rebajado). La 4.1.3 hablaba de una checklist para la beta
+  (`claude/estado-beta.md` y un doc «Haul · checklist para la beta») que no
+  está en este Mac.
+- **Avisos push apagados en Render** (`/api/health` → `push: false`, 22 nov):
+  faltan `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` en el panel.
+  El vigilante detecta bajadas, pero no llegan al móvil.
 - **Clave de Anthropic**: válida y en `.env` (8 nov). Lectura real con Haiku
   5.5 de las 4 capturas: Nike y Zalando perfectas (nombre, precio, tienda,
   color), Amazon sin título porque la captura no lo enseña, Zalando con pop-up
@@ -64,10 +68,11 @@ Chromium).
   crear el token en ui.awin.com/awin-api y rellenar `AWIN_PUBLISHER_ID`,
   `AWIN_TOKEN` y `AWIN_ADVERTISERS` en Render. Primera pasada real: comprobar
   en `/api/health` → `awin` enlaces y feed, y el tiempo del feed de Zalando.
-- **Atajo de iPhone**: causa encontrada y corregida el 15 nov («Codificar URL»
-  y «Obtener URLs» quieren la entrada como texto). Probado en el motor de
-  Atajos del Mac con Zalando, Amazon y un enlace suelto. Falta: subir la 4.1.2,
-  reinstalar el Atajo en el iPhone y probar desde las apps y desde Safari.
+- **Atajo de iPhone: funciona** (15 nov, 4.1.2). Causa: «Codificar URL» y
+  «Obtener URLs» querían la entrada como texto. Probado en el motor de Atajos
+  del Mac y confirmado por Alejandro en el iPhone desde Zalando, Amazon y
+  Safari. Decisión de la tarea D: el Atajo se queda (dos toques, sin copiar ni
+  pegar); el camino Copiar → Pegar sigue en la guía como alternativa.
 - **Persistencia**: falta saber si lo que falla es el móvil (listas que
   desaparecen: claves del dispositivo) o el servidor.
 - Comprobar Vivaticket en Render. Banco: Shein ×2, About You, AliExpress E059,
@@ -91,3 +96,7 @@ Chromium).
   quedó superado.
 - Una sola copia limpia para GitHub, `~/Desktop/haul-v4.0-para-github`, que se
   mantiene idéntica al proyecto; las copias de descomprimir se tiran (2 nov).
+- Antes de empezar, `/api/health` contra `package.json`: si Render va por
+  delante, el código nuevo está en otro sitio (22 nov: la 4.1.3 estaba en
+  Descargas y otra sesión numeró su trabajo 4.1.3 sobre la 4.1.2). Dos
+  sesiones no trabajan a la vez en esta carpeta.

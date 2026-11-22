@@ -132,3 +132,29 @@ Temu y Zara Home y los reintentos del desbloqueador (v4.0, 26 oct).
 Con la hoja al día y los enlaces sustituidos, la pasada 1 habría dado 92 %.
 Falta medirlo: pasadas 2, 3 y 4 con la 4.1.1, a horas distintas del mismo día
 para que el mercado no se mueva entre ellas.
+
+### Pasada 2 (15 nov, 4.1.1 → 4.1.2 a mitad; el lector no cambió): 80/100
+
+| Causa | Enlaces |
+|---|---|
+| Precio movido desde la última comprobación (nombre y foto bien) | E015 Shein (-3 %), E032 Levi's (+18 %, terminó el -15 %), E042 Snipes (-17 %), E043 Sprinter (-8 %), E048 Amazon (+6 %), E052 Zalando (+6 %), E061 Temu (+31 %), E074 Primor (+13 %), E083 PcComponentes (+4 %) |
+| Desbloqueador: tiempo agotado o vacío | E009 Lefties, E016 Shein, E017 Primark, E023 Adidas, E055 About You, E059/E060 AliExpress, E071 Sephora |
+| Cuenta de Bright Data (KYC) | E069/E070 Depop |
+| Anuncio vendido (detectado bien como `GONE`) | E068 Wallapop: el casco sustituto del 8 nov ya no existe |
+
+Lectura completa (nombre, foto y algún precio): 89/100. Conclusión: con Black
+Friday, una hoja de precios a mano caduca en días (9 de 100 en una semana) y
+los tiempos agotados del desbloqueador cambian de tienda cada día. Medir el
+92 % así mide el mercado y a Bright Data, no al lector. Propuesta en PLAN.md.
+
+### 4.1.4 (22 nov): verificador, reintento y anuncios vendidos
+
+Prueba real del verificador en local sobre los precios movidos de la pasada 2:
+Snipes (hoja 83,99 → ficha 98,99), Sprinter (59,99 → 54,99) y Zalando
+(79,95 → 69,95) confirmados: lector correcto, hoja vieja. En Sprinter la
+primera versión del verificador tomó «Precio últimos 30 días: 59,99 €» (la
+referencia de las rebajas) y discrepó: se excluyen los precios de referencia en
+las instrucciones. Amazon E048: hoy sirve su comprobación «seguir comprando» a
+Render y al Mac en la lectura rápida; ahora cuenta como muro y pasa al
+desbloqueador. E068 Wallapop: el casco sustituto se vendió en una semana;
+ahora es un soporte GoPro de un vendedor que fabrica.

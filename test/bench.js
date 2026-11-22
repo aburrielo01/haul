@@ -154,6 +154,97 @@ async function ok(name, fn) {
     assert.strictEqual(history.runs.length, 4);
   });
 
+  // ---- verificación, reintento y anuncios vendidos (4.1.4)
+  const withHtml = (o, html) => { Object.defineProperty(o, '_html', { value: html, enumerable: false }); return o; };
+
+  await ok('precio distinto pero confirmado por el verificador: acierto con aviso de hoja vieja', async () => {
+    const items = bench.loadItems();
+    const it = items.find((i) => i.id === 'E005');
+    const seen = [];
+    const verifier = async (args) => { seen.push(args); return { price: it.price + 3, confidence: 0.9 }; };
+    const fake = async (url) => withHtml({ ok: true, mode: 'fetch', title: it.title, priceValue: it.price + 3, image: 'https://x/i.jpg', url }, '<html><body>página</body></html>');
+    await db.cacheSet('bench:history', { runs: [], byId: {} }, 1000 * 60);
+    await (await bench.run({ db, extract: fake, filter: { ids: ['E005'] }, fresh: true, verifier })).finished;
+    const state = await bench.report(db);
+    const g = state.rows[0].grade;
+    assert.strictEqual(g.ok, true);
+    assert.strictEqual(g.verify.result, 'coincide');
+    assert.deepStrictEqual(g.sheetStale, { sheet: it.price, page: it.price + 3 });
+    assert.strictEqual(state.summary.sheetStale.length, 1);
+    assert.strictEqual(seen.length, 1);
+    assert.ok(!('price' in seen[0]) && !('sheet' in seen[0]), 'el verificador no recibe precios');
+  });
+
+  await ok('si el verificador ve otro precio, es fallo del lector', async () => {
+    const it = bench.loadItems().find((i) => i.id === 'E005');
+    const verifier = async () => ({ price: it.price + 20, confidence: 0.9 });
+    const fake = async (url) => withHtml({ ok: true, mode: 'fetch', title: it.title, priceValue: it.price + 3, image: 'https://x/i.jpg', url }, '<p>x</p>');
+    await (await bench.run({ db, extract: fake, filter: { ids: ['E005'] }, fresh: true, verifier })).finished;
+    const g = (await bench.report(db)).rows[0].grade;
+    assert.strictEqual(g.ok, false);
+    assert.strictEqual(g.verify.result, 'no-coincide');
+  });
+
+  await ok('el verificador no se usa si falla el nombre o la foto, ni sin página', async () => {
+    let calls = 0;
+    const verifier = async () => { calls++; return { price: 1, confidence: 1 }; };
+    const it = bench.loadItems().find((i) => i.id === 'E005');
+    const g1 = await bench.verifyRow(it, withHtml({ priceValue: 1 }, '<p>x</p>'), { ok: false, title: false, image: true, price: false }, verifier);
+    const g2 = await bench.verifyRow(it, { priceValue: 1 }, { ok: false, title: true, image: true, price: false }, verifier);
+    assert.strictEqual(calls, 0);
+    assert.strictEqual(g1.ok, false); assert.strictEqual(g2.ok, false);
+  });
+
+  await ok('un tiempo agotado tiene una segunda oportunidad al final; el informe guarda la cifra a la primera', async () => {
+    const items = bench.loadItems();
+    const tries = {};
+    const fake = async (url) => {
+      const it = items.find((i) => i.url === url);
+      tries[it.id] = (tries[it.id] || 0) + 1;
+      if (it.id === 'E021' && tries[it.id] === 1) { const e = new Error('No hemos podido leer esta página.'); e.trail = [{ step: 'unlocker', result: 'timeout' }]; throw e; }
+      if (it.id === 'E001') { const e = new Error('Esta tienda no deja'); e.code = 'BLOCKED'; e.trail = [{ step: 'fetch', result: 'muro' }]; throw e; }
+      return { ok: true, mode: 'fetch', title: it.title, priceValue: it.price, image: 'https://x/i.jpg' };
+    };
+    await (await bench.run({ db, extract: fake, filter: { ids: ['E001', 'E005', 'E021'] }, fresh: true })).finished;
+    const state = await bench.report(db);
+    const byId = Object.fromEntries(state.rows.map((r) => [r.id, r]));
+    assert.strictEqual(tries.E021, 2, 'el tiempo agotado se reintenta');
+    assert.strictEqual(tries.E001, 1, 'un muro no se reintenta');
+    assert.strictEqual(byId.E021.grade.ok, true);
+    assert.strictEqual(byId.E021.retried, true);
+    assert.deepStrictEqual(byId.E021.firstTry, { ok: false, mode: 'error' });
+    assert.strictEqual(state.summary.ok, 2);
+    assert.strictEqual(state.summary.firstTry.ok, 1);
+    assert.strictEqual(state.summary.recoveredByRetry, 1);
+  });
+
+  await ok('un anuncio de segunda mano vendido no cuenta en el porcentaje y se pide sustituirlo', async () => {
+    const items = bench.loadItems();
+    const fake = async (url) => {
+      const it = items.find((i) => i.url === url);
+      if (it.id === 'E068') { const e = new Error('Este producto ya no está en la tienda.'); e.code = 'GONE'; e.trail = [{ step: 'retirada' }]; throw e; }
+      return { ok: true, mode: 'fetch', title: it.title, priceValue: it.price, image: 'https://x/i.jpg' };
+    };
+    await db.cacheSet('bench:history', { runs: [], byId: {} }, 1000 * 60);
+    await (await bench.run({ db, extract: fake, filter: { ids: ['E005', 'E067', 'E068'] }, fresh: true })).finished;
+    const state = await bench.report(db);
+    assert.strictEqual(state.summary.total, 2, 'E068 fuera del total');
+    assert.strictEqual(state.summary.ok, 2);
+    assert.strictEqual(state.summary.pctOk, 100);
+    assert.deepStrictEqual(state.summary.excluded, [{ id: 'E068', shop: 'Wallapop', why: 'vendido' }]);
+    const history = await bench.loadHistory(db);
+    assert.ok(!history.byId.E068, 'tampoco entra en el historial');
+  });
+
+  await ok('una tienda normal retirada (no de segunda mano) sí cuenta como fallo', async () => {
+    const items = bench.loadItems();
+    const fake = async (url) => { const e = new Error('Este producto ya no está en la tienda.'); e.code = 'GONE'; throw e; };
+    await (await bench.run({ db, extract: fake, filter: { ids: ['E005'] }, fresh: true })).finished;
+    const state = await bench.report(db);
+    assert.strictEqual(state.summary.total, 1);
+    assert.strictEqual(state.summary.ok, 0);
+  });
+
   console.log(`\n${passed} correctas\n`);
   process.exit(process.exitCode || 0);
 })();

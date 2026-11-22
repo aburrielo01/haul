@@ -129,6 +129,19 @@ function fakeClient(answer, { stop = 'end_turn' } = {}) {
     assert.strictEqual(fake.calls.length, callsBefore, 'no llega a llamar a la API');
   });
 
+  await ok('el verificador lee el texto visible junto al producto y no recibe ningún precio', async () => {
+    ai._reset();
+    const fake = fakeClient({ title: 'Nike Pegasus Plus 2', price: 169.99, currency: 'EUR', shop: 'Nike', url: '', color: '', size: '', confidence: 0.92 });
+    ai._setClient(fake);
+    const menu = '<nav>' + 'Inicio Hombre Mujer Ofertas '.repeat(700) + '</nav>';
+    const html = `<html><head><title>Nike</title><script type="application/ld+json">{"offers":{"price":"99.99"}}</script></head><body>${menu}<h1>Nike Pegasus Plus 2</h1><p>169,99 €</p></body></html>`;
+    const got = await ai.verifyPrice({ html, url: 'https://www.nike.com/es/t/x', title: 'Nike Pegasus Plus 2' });
+    assert.strictEqual(got.price, 169.99);
+    const prompt = fake.calls[0].messages[0].content[0].text;
+    assert.ok(prompt.includes('169,99'), 'la ventana llega hasta el precio aunque haya menús largos');
+    assert.ok(!prompt.includes('99.99'), 'el JSON-LD del lector no se le enseña');
+  });
+
   await ok('el gasto estimado del día sale en las estadísticas', () => {
     const s = ai.stats();
     assert.strictEqual(typeof s.today.usd, 'number');
@@ -183,8 +196,10 @@ function fakeClient(answer, { stop = 'end_turn' } = {}) {
         const st = ai.stats();
         assert.ok(got, 'sin respuesta' + (st.lastError ? ` · ${st.lastError.type} ${st.lastError.status || ''} ${st.lastError.message}` : '') + (st.pausedUntil ? ' · en pausa' : ''));
         console.log(`      → «${got.title}» · ${got.price} ${got.currency} · ${got.shop} · ${got.color || '-'} / ${got.size || '-'} · confianza ${got.confidence} · ${Date.now() - t} ms`);
-        // una captura puede no enseñar el nombre (Amazon con el precio abajo): vale con nombre o precio
-        assert.ok(got.title || got.price, 'ni nombre ni precio');
+        // una captura puede no enseñar el nombre (Amazon con el precio abajo): vale con nombre o
+        // precio; y si la tapa una ventana emergente, lo correcto es decirlo con poca confianza
+        if (/popup/.test(f)) assert.ok(got.title || got.price || got.confidence < 0.5, 'sin datos y con confianza alta');
+        else assert.ok(got.title || got.price, 'ni nombre ni precio');
       });
     }
     console.log('    gasto estimado de la tanda:', ai.stats().today.usd, 'USD');

@@ -305,6 +305,15 @@ banco (Inditex, H&M, Adidas, New Balance, Decathlon, Etsy, Zara Home, Maisons du
 Monde, Leroy Merlin, Fnac, Shein) solo se leen con el desbloqueador. Con saldo,
 92–95 %; sin saldo, en torno al 67 %, haga lo que haga el lector.
 
+**Desde la 4.1.4, el banco mide al lector, no al mercado.** Si nombre y foto
+aciertan pero el precio no cuadra con la hoja, un verificador (Claude, texto
+visible de la misma página, sin pistas) dice qué precio enseña la ficha; si
+coincide con el del lector, es acierto y el informe propone el precio nuevo.
+Los tiempos agotados tienen una segunda oportunidad al final (el informe da la
+cifra a la primera y con reintento), y un anuncio de segunda mano vendido
+(`ephemeral`) no cuenta. `/api/bench/run?…&verify=0` o `&retry=0` lo apagan.
+`scripts/pasada-banco.sh <n>` lanza y vigila una pasada leyendo el token del `.env`.
+
 ## Adaptadores por tienda
 
 Las grandes tiendas no publican datos estructurados y hay que ir a por sus propias

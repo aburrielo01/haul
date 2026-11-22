@@ -2,7 +2,7 @@
 /** Adaptadores por tienda y elección del precio correcto entre varios candidatos. */
 
 const assert = require('assert');
-const { parseHtml, cleanUrl, parsePrice } = require('../lib/extract');
+const { parseHtml, cleanUrl, parsePrice, isWall } = require('../lib/extract');
 const { ADAPTERS } = require('../lib/adapters');
 
 let passed = 0;
@@ -269,6 +269,11 @@ ok('un producto agotado pero con su ficha no cuenta como retirado', () => {
 ok('una ficha normal con "404" en el nombre no cuenta como retirada', () => {
   const html = '<html><head><title>Camiseta Error 404 | Tienda</title></head><body><h1>Camiseta Error 404</h1><span class="price">19,99 €</span></body></html>';
   assert.strictEqual(parseHtml(html, 'https://tienda.test/p/camiseta-404').gone, false);
+});
+ok('la comprobación de Amazon ("seguir comprando") es un muro, no una ficha llamada "Amazon.es"', () => {
+  const html = '<html><head><title>Amazon.es</title></head><body><p>Haz clic en el botón de abajo para seguir comprando</p><button>Seguir comprando</button><a>Condiciones de Uso y Venta</a></body></html>';
+  const p = parseHtml(html, 'https://www.amazon.es/dp/B0GR1QGFN5');
+  assert.strictEqual(isWall(p), true);
 });
 ok('precio sin separador de miles: 1469 es 1469, no 146', () => {
   assert.strictEqual(parsePrice('1469', 'EUR').value, 1469);

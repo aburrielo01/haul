@@ -111,3 +111,28 @@ el menú Compartir del iPhone; solo un Atajo o una app nativa.
 ## Lo que no entra hoy
 - Persistencia de listas (pendiente de saber si falla móvil o servidor).
 - Vivaticket en Render (se comprueba de paso con la pasada del banco).
+
+## A bis · Medir el 92 % sin que mande el mercado (aprobada; pasos 1-3 hechos el 22 nov en la 4.1.4)
+
+Dos pasadas (79 % y 80 %) enseñan dos ruidos que no son del lector: precios que
+se mueven (9-10 por semana en Black Friday) y tiempos agotados del
+desbloqueador que cambian de tienda cada día. Propuesta, por pasos:
+
+1. **Verificador de precio con Claude.** Cuando nombre y foto aciertan pero el
+   precio no cuadra con la hoja, el banco le pasa a Claude (Haiku) el texto
+   visible de la misma página y le pide el precio actual. Si coincide con el
+   del lector, la fila cuenta como acierto «precio verificado, hoja
+   desfasada» y el informe propone el valor nuevo para la hoja. Si no
+   coincide, es fallo del lector. Dos métodos independientes (estructura de
+   la página contra lectura del texto) que tienen que coincidir. Coste: unas
+   diez lecturas por pasada, menos de un céntimo. Comprobación: repetir a mano
+   una muestra de las filas que el verificador dé por buenas.
+2. **Segunda oportunidad a los tiempos agotados**, solo en el banco y en el
+   vigilante (nunca al añadir, para no hacer esperar al usuario): al final de
+   la pasada se reintentan una vez las filas que fallaron por tiempo agotado.
+   El informe da las dos cifras: a la primera y con reintento.
+3. **Fuera lo efímero.** Wallapop vende sus anuncios en días: sus filas pasan a
+   anuncios de vendedores profesionales con stock, o se cambian por otra
+   tienda de segunda mano más estable.
+4. Tres pasadas el mismo día con todo lo anterior. «Consistente» = las tres ≥
+   92 % en la cifra principal (lector correcto frente a la página de hoy).
