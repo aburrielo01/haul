@@ -158,3 +158,24 @@ las instrucciones. Amazon E048: hoy sirve su comprobación «seguir comprando» 
 Render y al Mac en la lectura rápida; ahora cuenta como muro y pasa al
 desbloqueador. E068 Wallapop: el casco sustituto se vendió en una semana;
 ahora es un soporte GoPro de un vendedor que fabrica.
+
+### Pasada 3 (22 nov, 4.1.4, 31 min): 88 % en el informe, 86 % de verdad
+
+El verificador confirmó 15 precios movidos (Nike -30 %, Vans -25 %, Game -44 %,
+Sephora -25 %, About You, Levi's, Snipes, Sprinter, Zalando, Primor,
+PcComponentes…). Dos eran falsos: E016 Shein lleva ya a otra camiseta de otra
+marca (INCRYTM en vez de Zorclune) y E015 Shein pasó de 15,49 a 55,88 €. La
+4.1.5 añade los frenos «misma ficha» y «cambio verosímil»; con ellos la pasada
+3 queda en 86/100. Reintento de tiempos agotados: 2 filas, 0 recuperadas.
+
+Fallos que quedan (14 con las reglas nuevas):
+
+| Causa | Enlaces |
+|---|---|
+| Shein: otra ficha o precio inverosímil | E015, E016 (sustituir E016) |
+| Shopify sin ficha para el verificador (arreglado en 4.1.5) | E035, E036 Pompeii |
+| Verificador sin precio en el texto (página dibujada con JavaScript) | E048 Amazon, E092 Samsung |
+| Verificador con poca confianza aunque coincide (arreglado en 4.1.5) | E090 Game |
+| Verificador y lector no coinciden (Temu enseña varios precios por talla) | E061 Temu |
+| Desbloqueador vacío o tiempo agotado | E017 Primark, E059/E060 AliExpress, E062 Temu |
+| Cuenta de Bright Data sin verificar (KYC) | E069, E070 Depop |

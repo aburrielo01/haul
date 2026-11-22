@@ -1,5 +1,25 @@
 # Cambios
 
+## 4.1.5 · 22 de noviembre de 2026
+
+### El verificador del banco, con dos frenos
+
+La pasada 3 (88 %) enseñó dos confirmaciones falsas en Shein: el verificador
+leía bien la página, pero la página no era la del producto (E016: «Zorclune
+Camiseta…» llevaba a «INCRYTM Camiseta…», otra marca) o el salto de precio no
+era creíble (E015: de 15,49 € a 55,88 €). Ahora, antes de consultar a Claude:
+
+- **Misma ficha**: la primera palabra del nombre esperado (en moda, la marca)
+  tiene que estar en lo leído. Si no, «revisar a mano» y no se gasta llamada.
+- **Cambio verosímil**: el precio nuevo entre 0,4 y 1,8 veces el de la hoja;
+  una rebaja de Black Friday cabe, un precio que se triplica no.
+- Si las dos cifras coinciden basta una confianza de 0,4 (antes 0,6): son dos
+  métodos independientes diciendo lo mismo (Game E090 se quedaba fuera).
+- Las tiendas Shopify (Pompeii) llevan la ficha leída: el verificador no
+  podía comprobarlas.
+
+Pasada 3 recalculada con estas reglas: 86/100.
+
 ## 4.1.4 · 22 de noviembre de 2026
 
 ### Junta las dos ramas

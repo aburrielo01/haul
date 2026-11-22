@@ -195,6 +195,37 @@ async function ok(name, fn) {
     assert.strictEqual(g1.ok, false); assert.strictEqual(g2.ok, false);
   });
 
+  await ok('no rescata otra ficha de nombre parecido (Shein: Zorclune → INCRYTM), ni la consulta', async () => {
+    let calls = 0;
+    const verifier = async () => { calls++; return { price: 52, confidence: 0.9 }; };
+    const it = { title: 'Zorclune Camiseta de manga larga cuello redondo para hombre', price: 49.99 };
+    const read = withHtml({ title: 'INCRYTM Camiseta de manga larga cuello redondo para hombre, bloque de color', priceValue: 52 }, '<p>x</p>');
+    const g = await bench.verifyRow(it, read, { ok: false, title: true, image: true, price: false }, verifier);
+    assert.strictEqual(g.ok, false);
+    assert.strictEqual(g.verify.why, 'otro-producto');
+    assert.strictEqual(calls, 0, 'no se gasta una llamada');
+  });
+
+  await ok('un precio que se triplica no se da por bueno sin mirarlo a mano', async () => {
+    const verifier = async () => ({ price: 55.88, confidence: 0.9 });
+    const it = { title: 'Radiana Blusa casual versátil', price: 15.49 };
+    const read = withHtml({ title: 'Radiana Blusa casual versátil y sexy', priceValue: 55.88 }, '<p>x</p>');
+    const g = await bench.verifyRow(it, read, { ok: false, title: true, image: true, price: false }, verifier);
+    assert.strictEqual(g.ok, false);
+    assert.strictEqual(g.verify.why, 'cambio-grande');
+  });
+
+  await ok('si las dos cifras coinciden basta una confianza de 0,4; si no coinciden, nada', async () => {
+    const it = { title: 'Hellraiser Revival Day One Edition PS5', price: 39.99 };
+    const read = withHtml({ title: 'Hellraiser Revival Day One Edition PS5', priceValue: 29.99 }, '<p>x</p>');
+    const base = { ok: false, title: true, image: true, price: false };
+    const g1 = await bench.verifyRow(it, read, base, async () => ({ price: 29.99, confidence: 0.45 }));
+    assert.strictEqual(g1.ok, true);
+    const g2 = await bench.verifyRow(it, read, base, async () => ({ price: 29.99, confidence: 0.3 }));
+    assert.strictEqual(g2.ok, false);
+    assert.strictEqual(g2.verify.result, 'poca-confianza');
+  });
+
   await ok('un tiempo agotado tiene una segunda oportunidad al final; el informe guarda la cifra a la primera', async () => {
     const items = bench.loadItems();
     const tries = {};

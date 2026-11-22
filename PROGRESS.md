@@ -1,7 +1,7 @@
 # PROGRESS.md · HAUL
 
-Última actualización: 22 de noviembre de 2026. En vivo: 4.1.3 (capturas y cola
-de Chromium, subida desde `~/Downloads/haul-4.1.3`). En local, sin subir: 4.1.4
+Última actualización: 22 de noviembre de 2026 (noche). En vivo: 4.1.4. En local,
+probada y sin subir: 4.1.5 (frenos del verificador).
 = 4.1.3 + verificador de precio del banco + guía del iPhone del 15 nov.
 
 ## Hecho
@@ -42,12 +42,12 @@ de Chromium, subida desde `~/Downloads/haul-4.1.3`). En local, sin subir: 4.1.4
   4.1.3 y con la guía del iPhone del 15 nov, que no había llegado a GitHub.
 
 ## Pendiente
-- **Banco en Render**: pasadas 1 (79 %) y 2 (80 %) analizadas fallo a fallo
-  (`test/banco-estado.md`): el ruido es el mercado (9-10 precios movidos por
-  semana) y los tiempos agotados del desbloqueador. La 4.1.4 mide al lector
-  frente a la página de hoy: verificador con Claude para los fallos solo de
-  precio, segunda oportunidad a los tiempos agotados y anuncios vendidos fuera
-  del cálculo. Falta: subir la 4.1.4 y lanzar tres pasadas el mismo día.
+- **Banco en Render**: pasadas 1-3 = 79 %, 80 %, 88 % (86 % recalculada: dos
+  confirmaciones falsas de Shein). La 4.1.5 frena al verificador (misma ficha
+  y cambio verosímil) y deja verificar Shopify. Siguiente: subir la 4.1.5 y
+  lanzar las pasadas 4 y 5 el mismo día con un lector. Lo que queda por debajo
+  del 92 % es sobre todo anti-bot (AliExpress, Temu, Primark, Shein) y Depop
+  (KYC de Bright Data, lo tiene que hacer Alejandro).
 - **Capturas (4.1.3)**: probar en el iPhone una captura con letra pequeña
   (precio tachado y rebajado). La 4.1.3 hablaba de una checklist para la beta
   (`claude/estado-beta.md` y un doc «Haul · checklist para la beta») que no
