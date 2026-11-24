@@ -62,6 +62,7 @@
     <div class="spacer"></div>
     <button class="btn btn--primary btn--block" style="margin-top:20px" data-action="start">Empezar ahora →</button>
     <button class="btn btn--ghost btn--block" data-action="goto-home">Ya he usado Haul</button>
+    <button class="linkbtn" style="margin-top:6px" data-action="transfer-in">¿Tienes listas en Safari o en otro móvil? Recupéralas con un código</button>
   </section>
 
   <!-- ═════════════════════════════════ HOME ══════════════════════════════ -->
@@ -206,6 +207,15 @@
       <h3 class="title">Haul en el menú Compartir</h3>
       <p class="small muted" style="margin-top:4px">Desde cualquier app de tienda: Compartir → Añadir a Haul. Sin copiar ni pegar.</p>
       <button class="btn btn--sm btn--block" style="margin-top:10px" data-action="mobile-help">Cómo activarlo</button>
+    </div>
+
+    <div style="margin-top:18px">
+      <h3 class="title">Tus listas en otro sitio</h3>
+      <p class="small muted" style="margin-top:4px">En iPhone, Safari y el icono de la pantalla de inicio no comparten datos. Pide un código donde tengas tus listas y pégalo en el otro sitio.</p>
+      <div class="row" style="gap:8px;margin-top:10px">
+        <button class="btn btn--sm grow" data-action="transfer-out">Pasar mis listas</button>
+        <button class="btn btn--sm grow" data-action="transfer-in">Tengo un código</button>
+      </div>
     </div>
 
     <div style="margin-top:18px" id="pushBlock">
@@ -370,6 +380,26 @@
 
   <!-- detalle de producto -->
   <!-- ═══════════ AÑADIR A HAUL DESDE EL MENÚ COMPARTIR DEL MÓVIL ════════ -->
+  <div class="sheet" id="sheet-transfer" role="dialog" aria-modal="true" aria-labelledby="transferTitle">
+    <div class="sheet__grab"></div>
+    <span class="kicker">pasar listas</span>
+    <h2 class="display" style="margin-top:4px" id="transferTitle">Tus listas, en otro sitio</h2>
+    <div id="transferOut" class="hidden">
+      <p class="lead" style="margin-top:8px">Abre Haul donde las quieras tener (por ejemplo, desde el icono de tu pantalla de inicio), ve a <b>Perfil → Tengo un código</b> y pega este:</p>
+      <div class="transfer-code" id="transferCode" aria-live="polite">····-····</div>
+      <button class="btn btn--primary btn--block" id="btnTransferCopy">Copiar código</button>
+      <p class="small muted" style="margin-top:8px" id="transferInfo"></p>
+    </div>
+    <div id="transferIn" class="hidden">
+      <p class="lead" style="margin-top:8px">Pega el código que te dio Haul en el otro sitio (<b>Perfil → Pasar mis listas</b>). Vale 15 minutos y una sola vez.</p>
+      <div class="row" style="gap:8px;margin-top:12px">
+        <input class="input grow transfer-input" id="transferInput" placeholder="ABCD-EF23" maxlength="12" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" aria-label="Código">
+        <button class="btn btn--sm" id="btnTransferPaste">Pegar</button>
+      </div>
+      <button class="btn btn--primary btn--block" style="margin-top:12px" id="btnTransferClaim">Recuperar mis listas</button>
+    </div>
+  </div>
+
   <div class="sheet" id="sheet-mobile" role="dialog" aria-modal="true" aria-labelledby="mobileTitle">
     <div class="sheet__grab"></div>
     <span class="kicker">menú compartir</span>

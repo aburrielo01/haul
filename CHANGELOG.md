@@ -1,5 +1,27 @@
 # Cambios
 
+## 4.1.7 · 23 de noviembre de 2026
+
+### Pasar tus listas de Safari al icono (y de un móvil a otro)
+
+En iPhone, Safari y el icono de la pantalla de inicio guardan los datos por
+separado. HAUL no tiene cuentas: las llaves de las listas viven en el
+navegador, así que quien empezaba en Safari y luego abría el icono se
+encontraba Haul vacío (le pasó a Alejandro el 23 nov). Las listas nunca se
+perdieron: estaban en el servidor, sin llave a mano.
+
+- **Perfil → Tus listas en otro sitio**: «Pasar mis listas» crea un código
+  corto (`ABCD-EF23`, sin 0/O ni 1/I/L) con botón de copiar; «Tengo un código»
+  lo canjea y trae las listas propias con su llave, las guardadas de otros y
+  el perfil. Vale 15 minutos y una sola vez; solo lleva llaves que de verdad
+  abren esas listas; acepta minúsculas y espacios; ocho intentos por minuto.
+- La bienvenida (Haul vacío) ofrece recuperarlas con un código.
+- Haul pide al navegador que no borre sus datos por falta de uso (Safari borra
+  los de las webs que no visitas en una semana; los del icono, no).
+- `POST /api/transfer` y `POST /api/transfer/claim`. Pruebas: 8 nuevas en el
+  smoke (llave falsa, código inventado o mal escrito, un solo uso, la llave
+  recuperada abre la lista como propietario).
+
 ## 4.1.6 · 22 de noviembre de 2026
 
 ### El verificador, sin inventos

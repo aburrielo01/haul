@@ -189,6 +189,14 @@ los avisos solo llegan con Haul instalada en la pantalla de inicio (iOS 16.4+).
 `/api/health` devuelve `watch` (piezas comprobadas, cambios, bajadas, último
 despertar) y `push` (si hay claves).
 
+## Pasar tus listas a otro sitio
+
+Sin cuentas, las llaves de las listas viven en el navegador. En iPhone, Safari
+y el icono de la pantalla de inicio no comparten datos, así que Perfil → *Tus
+listas en otro sitio* da un código de un solo uso (15 minutos) que lleva las
+llaves de un sitio a otro: `POST /api/transfer` lo crea con las llaves que de
+verdad abren esas listas y `POST /api/transfer/claim` lo canjea una vez.
+
 ## Lectura con IA: capturas y fichas a medias
 
 Con `ANTHROPIC_API_KEY` en el entorno, dos cosas pasan por Claude (`lib/ai.js`):

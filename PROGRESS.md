@@ -1,7 +1,7 @@
 # PROGRESS.md · HAUL
 
-Última actualización: 22 de noviembre de 2026 (noche). En vivo: 4.1.5. En local,
-probada y sin subir: 4.1.6 (el verificador no admite precios inventados).
+Última actualización: 23 de noviembre de 2026. En vivo: 4.1.6. En local,
+probada y sin subir: 4.1.7 (pasar listas con un código).
 = 4.1.3 + verificador de precio del banco + guía del iPhone del 15 nov.
 
 ## Hecho
@@ -42,12 +42,15 @@ probada y sin subir: 4.1.6 (el verificador no admite precios inventados).
   4.1.3 y con la guía del iPhone del 15 nov, que no había llegado a GitHub.
 
 ## Pendiente
-- **Banco en Render**: pasadas 1-5 = 79, 80, 88 (86 real), 88, 88 %. La 4.1.6
-  quita los fallos del verificador que quedaban (precios inventados, ventana
-  mal anclada); proyección de la pasada 4 con ella: 92 %. Falta: subir la 4.1.6
-  cuando acabe la pasada 5 y lanzar tres pasadas seguidas. Por debajo quedan
-  anti-bot (Shein, Primark, AliExpress, Temu) y Depop (KYC de Bright Data, lo
-  tiene que hacer Alejandro).
+- **Banco en Render**: pasadas 1-7 = 79, 80, 88 (86 real), 88, 88, 89, 87 %
+  (la 8 no llegó a lanzarse: el Mac se durmió y se cerró la sesión). Estable en
+  torno al 88 %. Falta para el 90 % de la beta: 4.1.7 con la página de Shopify
+  en el mercado de España para el verificador (Pompeii ×2), comprobar a mano El
+  Corte Inglés E049 y `TARGET_PCT` = 90; luego tres pasadas. Por debajo quedan
+  anti-bot (Shein, AliExpress, About You, Primark, Temu) y Depop (KYC).
+- **Tope diario del desbloqueador**: el contador de 300 lecturas vive en
+  memoria y se pone a cero con cada despliegue; no protege el gasto en Bright
+  Data. Guardarlo en la base de datos.
 - **Capturas (4.1.3)**: probar en el iPhone una captura con letra pequeña
   (precio tachado y rebajado). La 4.1.3 hablaba de una checklist para la beta
   (`claude/estado-beta.md` y un doc «Haul · checklist para la beta») que no
@@ -73,8 +76,12 @@ probada y sin subir: 4.1.6 (el verificador no admite precios inventados).
   del Mac y confirmado por Alejandro en el iPhone desde Zalando, Amazon y
   Safari. Decisión de la tarea D: el Atajo se queda (dos toques, sin copiar ni
   pegar); el camino Copiar → Pegar sigue en la guía como alternativa.
-- **Persistencia**: falta saber si lo que falla es el móvil (listas que
-  desaparecen: claves del dispositivo) o el servidor.
+- **Persistencia: resuelta en la 4.1.7** (falta subirla y probarla en el
+  iPhone). Causa: Safari y el icono de inicio no comparten datos en iPhone y
+  las llaves de las listas se quedaron en Safari. Arreglo: código de un solo
+  uso en Perfil (Pasar mis listas / Tengo un código). Probado en local con dos
+  orígenes de datos separados. Prueba real: Safari → Perfil → Pasar mis listas
+  → Copiar; icono → Tengo un código → Pegar → Recuperar.
 - Comprobar Vivaticket en Render. Banco: Shein ×2, About You, AliExpress E059,
   Depop ×2 (Bright Data pide KYC).
 
@@ -94,6 +101,9 @@ probada y sin subir: 4.1.6 (el verificador no admite precios inventados).
   más robusto que cualquier extracción dentro de Atajos.
 - El diseño sigue siendo «scrapbook editorial»; el brandbook V2 (oscuro, lima)
   quedó superado.
+- **Beta con ≥ 90 % en el banco** (Alejandro, 23 nov): el 92 % queda como
+  objetivo; lo que falta para él son tiendas anti-bot y la verificación de la
+  cuenta de Bright Data (Depop), no el lector.
 - Una sola copia limpia para GitHub, `~/Desktop/haul-v4.0-para-github`, que se
   mantiene idéntica al proyecto; las copias de descomprimir se tiran (2 nov).
 - Antes de empezar, `/api/health` contra `package.json`: si Render va por

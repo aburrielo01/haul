@@ -142,6 +142,29 @@ async function call(path, { method = 'GET', body, token } = {}) {
   const page = await fetch(`${BASE}/l/${slug}`).then((r) => r.text());
   check('la página compartida trae su Open Graph', page.includes('og:title') && page.includes('Test de verano'));
 
+  // ---- pasar listas con un código (4.1.7): Safari y el icono de inicio no comparten datos
+  const second = await call('/api/lists', { method: 'POST', body: { name: 'Pública para guardar', emoji: '✶', theme: 'lime', visibility: 'public' } });
+  const fake = await call('/api/transfer', { method: 'POST', body: { lists: [{ slug, token: 'llave-falsa' }] } });
+  check('no crea código con una llave que no abre la lista', fake.status === 400);
+  const out = await call('/api/transfer', { method: 'POST', body: {
+    lists: [{ slug, token: owner }, { slug: 'no-existe', token: 'x' }],
+    saved: [second.data.list.slug], profile: { name: 'Ale', avatar: '🦊' },
+  } });
+  check('crea un código de 8 letras y números con las listas buenas', out.status === 200 && /^[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(out.data.code) && out.data.lists === 1 && out.data.saved === 1, JSON.stringify(out.data));
+  const bad = await call('/api/transfer/claim', { method: 'POST', body: { code: 'ZZZZ-ZZZZ' } });
+  check('un código inventado no vale', bad.status === 404);
+  const short = await call('/api/transfer/claim', { method: 'POST', body: { code: 'ABC' } });
+  check('un código mal escrito se explica', short.status === 400);
+  const claim = await call('/api/transfer/claim', { method: 'POST', body: { code: out.data.code.toLowerCase().replace('-', ' ') } });
+  const got = claim.data && claim.data.lists && claim.data.lists[0];
+  check('el código trae la lista con su llave (y acepta minúsculas y espacios)', claim.status === 200 && got && got.list.slug === slug && got.ownerToken === owner && Array.isArray(got.list.items), JSON.stringify(claim.data).slice(0, 200));
+  check('trae también las listas guardadas y el perfil', claim.data.saved.length === 1 && claim.data.saved[0].slug === second.data.list.slug && claim.data.profile.name === 'Ale');
+  const again = await call('/api/transfer/claim', { method: 'POST', body: { code: out.data.code } });
+  check('el código sirve una sola vez', again.status === 404);
+  const reopen = await call(`/api/lists/${slug}`, { token: got && got.ownerToken });
+  check('con la llave recuperada se abre la lista como propietario', reopen.status === 200 && reopen.data.list.role === 'owner');
+  await call(`/api/lists/${second.data.list.slug}`, { method: 'DELETE', token: second.data.ownerToken });
+
   const badUrl = await call('/api/extract', { method: 'POST', body: { url: 'http://127.0.0.1:22/' } });
   check('bloquea URLs internas (SSRF)', badUrl.status >= 400);
 

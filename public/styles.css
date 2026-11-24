@@ -1039,3 +1039,16 @@ img { max-width: 100%; display: block; }
 .steps__manual > summary::-webkit-details-marker { display: none; }
 .steps__manual[open] > summary { color: var(--ink-soft); }
 a.btn { text-decoration: none; }
+
+/* pasar listas (4.1.7): el código se lee de un vistazo y se escribe sin dudas */
+.transfer-code {
+  margin: 16px 0 12px;
+  padding: 14px 10px;
+  border: 1.5px dashed currentColor;
+  font-family: var(--mono);
+  font-size: 30px;
+  letter-spacing: .18em;
+  text-align: center;
+  user-select: all;
+}
+.transfer-input { font-family: var(--mono); letter-spacing: .12em; text-transform: uppercase; }

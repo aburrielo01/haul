@@ -1,6 +1,6 @@
 /* Service worker de Haul: la app abre al instante y sigue navegable sin datos. */
 
-const VERSION = 'haul-v4.1.6';
+const VERSION = 'haul-v4.1.7';
 const SHARE_CACHE = 'haul-share';
 const SHELL = ['/', '/styles.css', '/app.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/favicon.svg'];
 

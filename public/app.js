@@ -2291,6 +2291,8 @@ document.addEventListener('click', (ev) => {
     case 'close-sheets': closeSheets(); break;
     case 'install': promptInstall(); break;
     case 'mobile-help': openMobileHelp(); break;
+    case 'transfer-out': transferOut(); break;
+    case 'transfer-in': transferIn(); break;
   }
 });
 
@@ -2583,10 +2585,93 @@ function shareIntoList(incoming) {
   }
 }
 
+/* ------------------------------------------------- pasar listas (4.1.7) */
+
+// En iPhone, Safari y el icono de la pantalla de inicio no comparten datos: las
+// llaves de las listas se quedan donde se crearon. Con un código de un solo uso
+// se llevan de un sitio a otro, sin cuentas.
+async function transferOut() {
+  const lists = ownedLists();
+  const saved = (store.data.saved || []).map((x) => x.slug);
+  if (!lists.length && !saved.length) return toast('En este dispositivo no hay listas que pasar');
+  $('#transferOut').classList.remove('hidden');
+  $('#transferIn').classList.add('hidden');
+  $('#transferCode').textContent = '····-····';
+  $('#transferInfo').textContent = 'Creando el código…';
+  $('#btnTransferCopy').disabled = true;
+  openSheet('sheet-transfer');
+  try {
+    const r = await api('/transfer', { method: 'POST', body: { lists, saved, profile: store.data.profile } });
+    $('#transferCode').textContent = r.code;
+    const n = r.lists + r.saved;
+    $('#transferInfo').textContent = `${n} ${n === 1 ? 'lista' : 'listas'} · vale 15 minutos y una sola vez.`;
+    $('#btnTransferCopy').disabled = false;
+  } catch (err) {
+    $('#transferInfo').textContent = err.message;
+  }
+}
+
+function transferIn() {
+  $('#transferIn').classList.remove('hidden');
+  $('#transferOut').classList.add('hidden');
+  $('#transferInput').value = '';
+  openSheet('sheet-transfer');
+}
+
+async function transferClaim() {
+  const code = $('#transferInput').value.trim();
+  if (!code) return toast('Pega el código que te dio Haul en el otro sitio');
+  const btn = $('#btnTransferClaim');
+  btn.disabled = true;
+  try {
+    const r = await api('/transfer/claim', { method: 'POST', body: { code } });
+    // al revés para que queden en el mismo orden que en el otro sitio
+    for (const x of r.lists.slice().reverse()) store.addList(x.list, x.ownerToken);
+    const have = new Set((store.data.saved || []).map((x) => x.slug));
+    for (const l of r.saved) {
+      if (have.has(l.slug) || store.tokenFor(l.slug)) continue;
+      (store.data.saved = store.data.saved || []).push({
+        slug: l.slug, name: l.name, emoji: l.emoji, theme: l.theme, visibility: l.visibility,
+        count: l.items.length, covers: l.items.slice(0, 4).map((i) => i.image).filter(Boolean),
+        total: sumTotal(l.items).value,
+      });
+    }
+    if (r.profile && r.profile.name && !store.data.profile.name) store.data.profile = { ...store.data.profile, ...r.profile };
+    store.data.seenWelcome = true;
+    store.save();
+    closeSheets();
+    renderProfile();
+    renderHome();
+    goto('home');
+    const n = r.lists.length + r.saved.length;
+    toast(n ? `${n} ${n === 1 ? 'lista recuperada' : 'listas recuperadas'} ✦` : 'Ese código no traía listas');
+    syncPushLists();
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+$('#btnTransferCopy').addEventListener('click', async () => {
+  const code = $('#transferCode').textContent.trim();
+  try { await navigator.clipboard.writeText(code); toast('Código copiado ✦'); }
+  catch { toast('Mantén pulsado el código para copiarlo'); }
+});
+$('#btnTransferPaste').addEventListener('click', async () => {
+  try { $('#transferInput').value = (await navigator.clipboard.readText()).trim().slice(0, 12); }
+  catch { toast('Mantén pulsado el campo y elige Pegar'); }
+});
+$('#btnTransferClaim').addEventListener('click', transferClaim);
+$('#transferInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') transferClaim(); });
+
 /* -------------------------------------------------------------- arranque */
 
 function boot() {
   store.load();
+  // que el navegador no borre los datos de Haul por falta de uso (Safari lo hace
+  // con las webs que no visitas en una semana; con el icono de inicio, no)
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   $('#marqueeTrack').innerHTML = new Array(2).fill(
     '<span>haul ✦ guarda ✦ organiza ✦ comparte ✦ escanea ✦ todo lo que quieres ✦</span>'
   ).join('');

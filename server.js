@@ -11,6 +11,7 @@ require('./lib/env').load();
 
 const express = require('express');
 const path = require('path');
+const crypto = require('crypto');
 const fs = require('fs');
 const db = require('./lib/db');
 const extract = require('./lib/extract');
@@ -422,6 +423,76 @@ app.delete('/api/push/subscribe', limitWrite, async (req, res) => {
   if (!endpoint) return fail(res, 400, 'Falta el endpoint');
   await db.pushSubDelete(endpoint).catch(() => {});
   res.json({ ok: true });
+});
+
+/* ------------------------------------------------- pasar listas (4.1.7) */
+
+/**
+ * En iPhone, Safari y el icono de la pantalla de inicio guardan los datos por
+ * separado: las llaves de las listas se quedan en uno y en el otro Haul
+ * empieza de cero (23 nov). Un código corto las lleva de un sitio a otro sin
+ * cuentas: lo crea quien tiene las llaves, vale 15 minutos y una sola vez, y
+ * solo lleva llaves que de verdad abren esas listas.
+ */
+const TRANSFER_TTL = 15 * 60 * 1000;
+const TRANSFER_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin 0/O ni 1/I/L
+const limitTransfer = rateLimit({ windowMs: 60_000, max: 8, key: 'transfer' });
+const normCode = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+function transferCode() {
+  let c = '';
+  for (const b of crypto.randomBytes(8)) c += TRANSFER_ALPHABET[b % TRANSFER_ALPHABET.length];
+  return `${c.slice(0, 4)}-${c.slice(4)}`;
+}
+
+app.post('/api/transfer', limitWrite, async (req, res) => {
+  try {
+    const lists = Array.isArray(req.body?.lists) ? req.body.lists.slice(0, 200) : [];
+    const owned = [];
+    for (const l of lists) {
+      if (!l || typeof l.slug !== 'string' || typeof l.token !== 'string') continue;
+      const row = await db.getListBySlug(l.slug);
+      if (row && row.owner_token === l.token) owned.push({ slug: row.slug, token: l.token });
+    }
+    const saved = (Array.isArray(req.body?.saved) ? req.body.saved : [])
+      .filter((x) => typeof x === 'string' && x.length < 80).slice(0, 200);
+    if (!owned.length && !saved.length) return fail(res, 400, 'En este dispositivo no hay listas que pasar');
+    const p = req.body?.profile && typeof req.body.profile === 'object' ? req.body.profile : null;
+    const profile = p ? { name: String(p.name || '').slice(0, 24), avatar: String(p.avatar || '').slice(0, 8) } : null;
+    const code = transferCode();
+    await db.cacheSet('transfer:' + normCode(code), { lists: owned, saved, profile }, TRANSFER_TTL);
+    res.json({ ok: true, code, lists: owned.length, saved: saved.length, expiresAt: Date.now() + TRANSFER_TTL });
+  } catch (err) {
+    console.error('transfer', err);
+    fail(res, 500, 'No se ha podido crear el código');
+  }
+});
+
+app.post('/api/transfer/claim', limitTransfer, async (req, res) => {
+  const code = normCode(req.body?.code);
+  if (code.length !== 8) return fail(res, 400, 'El código tiene 8 letras y números, como ABCD-EF23');
+  try {
+    const key = 'transfer:' + code;
+    const data = await db.cacheGet(key);
+    if (!data || data.used) return fail(res, 404, 'Ese código no vale o ha caducado. Pide uno nuevo.');
+    await db.cacheSet(key, { used: true }, TRANSFER_TTL); // un solo uso
+    const lists = [];
+    for (const l of data.lists || []) {
+      const row = await db.getListBySlug(l.slug);
+      if (!row || row.owner_token !== l.token) continue; // borrada o con otra llave desde entonces
+      lists.push({ list: publicList(row, await db.listItems(row.id), 'owner'), ownerToken: l.token });
+    }
+    const saved = [];
+    for (const slug of data.saved || []) {
+      const row = await db.getListBySlug(slug);
+      if (!row || row.visibility !== 'public') continue;
+      saved.push(publicList(row, await db.listItems(row.id), 'viewer'));
+    }
+    res.json({ ok: true, lists, saved, profile: data.profile || null });
+  } catch (err) {
+    console.error('transfer claim', err);
+    fail(res, 500, 'No se han podido recuperar las listas');
+  }
 });
 
 // Un aviso de prueba, para comprobar que todo el camino funciona
