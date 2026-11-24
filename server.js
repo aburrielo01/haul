@@ -20,6 +20,7 @@ const watch = require('./lib/watch');
 const push = require('./lib/push');
 const ai = require('./lib/ai');
 const awin = require('./lib/awin');
+const beta = require('./lib/beta');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -281,6 +282,9 @@ app.post('/api/lists/:slug/items', limitWrite, async (req, res) => {
       source: body.source,
       addedBy: role === 'owner' ? '' : String(body.addedBy || '').trim(),
     });
+    // beta (4.1.8): apunta quién ha guardado; si falla, el producto ya está guardado
+    await beta.recordSave(db, req, { shop: item.shop, source: item.source })
+      .catch((err) => console.error('beta save', err && err.message));
     res.status(201).json({ ok: true, item: publicItem(item) });
   } catch (err) {
     console.error('addItem', err);
@@ -459,8 +463,11 @@ app.post('/api/transfer', limitWrite, async (req, res) => {
     if (!owned.length && !saved.length) return fail(res, 400, 'En este dispositivo no hay listas que pasar');
     const p = req.body?.profile && typeof req.body.profile === 'object' ? req.body.profile : null;
     const profile = p ? { name: String(p.name || '').slice(0, 24), avatar: String(p.avatar || '').slice(0, 8) } : null;
+    // beta (4.1.8): la identidad anónima viaja con las listas (Safari → icono = misma persona)
+    const b = req.body?.beta && typeof req.body.beta === 'object' ? req.body.beta : {};
+    const betaId = { who: beta.cleanWho(b.who), invite: beta.cleanInvite(b.invite) };
     const code = transferCode();
-    await db.cacheSet('transfer:' + normCode(code), { lists: owned, saved, profile }, TRANSFER_TTL);
+    await db.cacheSet('transfer:' + normCode(code), { lists: owned, saved, profile, beta: betaId }, TRANSFER_TTL);
     res.json({ ok: true, code, lists: owned.length, saved: saved.length, expiresAt: Date.now() + TRANSFER_TTL });
   } catch (err) {
     console.error('transfer', err);
@@ -488,7 +495,7 @@ app.post('/api/transfer/claim', limitTransfer, async (req, res) => {
       if (!row || row.visibility !== 'public') continue;
       saved.push(publicList(row, await db.listItems(row.id), 'viewer'));
     }
-    res.json({ ok: true, lists, saved, profile: data.profile || null });
+    res.json({ ok: true, lists, saved, profile: data.profile || null, beta: data.beta || null });
   } catch (err) {
     console.error('transfer claim', err);
     fail(res, 500, 'No se han podido recuperar las listas');
@@ -540,6 +547,11 @@ app.post('/api/extract', limitExtract, async (req, res) => {
     console.error('extract', url, err && err.message, JSON.stringify((err && err.trail) || []).slice(0, 600));
     const blocked = err && err.code === 'BLOCKED';
     const gone = err && err.code === 'GONE';
+    // beta (4.1.8): qué tiendas fallan a la gente de verdad, para la revisión del domingo
+    let failShop = '';
+    try { failShop = extract.shopFromUrl(url) || ''; } catch { /* enlace sin tienda reconocible */ }
+    beta.recordFail(db, req, { shop: failShop, code: blocked ? 'BLOCKED' : gone ? 'GONE' : 'EXTRACT_FAILED' })
+      .catch((e) => console.error('beta fail', e && e.message));
     res.status(blocked ? 422 : gone ? 404 : 502).json({
       ok: false,
       code: blocked ? 'BLOCKED' : gone ? 'GONE' : 'EXTRACT_FAILED',
@@ -621,6 +633,50 @@ app.get('/api/bench/report', async (req, res) => {
   const state = await bench.report(db);
   if (!req.query.html) return res.json({ ok: true, ...state });
   res.type('html').send(renderBenchHtml(state));
+});
+
+/* ------------------------------------------------------- beta (4.1.8) */
+
+// La app avisa de que se ha abierto un enlace de invitación (`/?i=código`).
+// `valid: false` le dice que ese código no existe, para que no lo guarde.
+app.post('/api/beta/open', limitWrite, async (req, res) => {
+  try {
+    res.json({ ok: true, valid: await beta.recordOpen(db, req) });
+  } catch (err) {
+    console.error('beta open', err);
+    fail(res, 500, 'No se ha podido apuntar la invitación');
+  }
+});
+
+// Los números del domingo: /api/beta/report?key=…  (añade &html=1 para verlos en el navegador)
+app.get('/api/beta/report', async (req, res) => {
+  if (!diagAuth(req, res)) return;
+  try {
+    const summary = await beta.report(db);
+    res.setHeader('Cache-Control', 'no-store');
+    if (!req.query.html) return res.json({ ok: true, ...summary });
+    res.type('html').send(beta.renderHtml(summary, { origin: `${req.protocol}://${req.get('host')}` }));
+  } catch (err) {
+    fail(res, 500, err.message);
+  }
+});
+
+// Crea invitaciones: /api/beta/invites/new?key=…&n=15  (&test=1 para un código propio que no cuenta)
+app.get('/api/beta/invites/new', async (req, res) => {
+  if (!diagAuth(req, res)) return;
+  try {
+    const n = Math.min(50, Math.max(1, Number(req.query.n) || 1));
+    const origin = `${req.protocol}://${req.get('host')}`;
+    const created = [];
+    for (let i = 0; i < n; i++) {
+      const inv = await db.inviteCreate({ test: req.query.test === '1' });
+      created.push({ code: inv.code, link: `${origin}/?i=${inv.code}`, test: !!Number(inv.test) });
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ ok: true, created });
+  } catch (err) {
+    fail(res, 500, err.message);
+  }
 });
 
 function renderBenchHtml(state) {
@@ -783,6 +839,27 @@ app.get('/atajo/:name', (req, res, next) => {
   res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent('Añadir a Haul.shortcut')}`);
   res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(SHORTCUT_FILE);
+});
+
+/**
+ * Manifiesto con la invitación dentro (4.1.8). En iPhone, el icono de la
+ * pantalla de inicio no comparte datos con Safari: si el icono se instala desde
+ * un enlace de invitación, tiene que abrir `/?i=código` para seguir contando
+ * como la misma persona. La app pide `/manifest.webmanifest?i=código` y aquí se
+ * le cambia el `start_url`. Sin `?i=`, se sirve el fichero tal cual.
+ */
+const MANIFEST_FILE = path.join(PUBLIC_DIR, 'manifest.webmanifest');
+app.get('/manifest.webmanifest', async (req, res, next) => {
+  const code = beta.cleanInvite(req.query.i);
+  if (!code) return next();
+  try {
+    const manifest = JSON.parse(await fs.promises.readFile(MANIFEST_FILE, 'utf8'));
+    manifest.start_url = `/?i=${code}`;
+    res.setHeader('Cache-Control', 'no-cache');
+    res.type('application/manifest+json').send(JSON.stringify(manifest));
+  } catch (err) {
+    next(err);
+  }
 });
 
 app.use(express.static(PUBLIC_DIR, {

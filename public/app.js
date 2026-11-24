@@ -104,7 +104,8 @@ function loadScript(src) {
 /* ------------------------------------------------------------ almacén */
 
 const store = {
-  data: { profile: { name: '', avatar: '😎' }, lists: [], saved: [], seenWelcome: false, hints: {}, push: { endpoint: '' } },
+  // `who`, `invite` e `inviteAck` son de la medición de la beta (4.1.8): ver initBeta()
+  data: { profile: { name: '', avatar: '😎' }, lists: [], saved: [], seenWelcome: false, hints: {}, push: { endpoint: '' }, who: '', invite: '', inviteAck: false },
   load() {
     try {
       const raw = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
@@ -166,6 +167,9 @@ async function api(path, { method = 'GET', body, slug } = {}) {
   if (body) headers['content-type'] = 'application/json';
   const token = slug ? store.tokenFor(slug) || session.collabToken : '';
   if (token) headers['x-haul-token'] = token;
+  // beta (4.1.8): identificador anónimo y, si lo hay, código de invitación
+  if (store.data.who) headers['x-haul-who'] = store.data.who;
+  if (store.data.invite) headers['x-haul-invite'] = store.data.invite;
 
   const res = await fetch('/api' + path, {
     method, headers, body: body ? JSON.stringify(body) : undefined,
@@ -2601,7 +2605,11 @@ async function transferOut() {
   $('#btnTransferCopy').disabled = true;
   openSheet('sheet-transfer');
   try {
-    const r = await api('/transfer', { method: 'POST', body: { lists, saved, profile: store.data.profile } });
+    const r = await api('/transfer', {
+      method: 'POST',
+      // con las listas viaja también quién eres para la beta: Safari y el icono son la misma persona
+      body: { lists, saved, profile: store.data.profile, beta: { who: store.data.who, invite: store.data.invite } },
+    });
     $('#transferCode').textContent = r.code;
     const n = r.lists + r.saved;
     $('#transferInfo').textContent = `${n} ${n === 1 ? 'lista' : 'listas'} · vale 15 minutos y una sola vez.`;
@@ -2637,8 +2645,13 @@ async function transferClaim() {
       });
     }
     if (r.profile && r.profile.name && !store.data.profile.name) store.data.profile = { ...store.data.profile, ...r.profile };
+    if (r.beta) {
+      if (r.beta.who) store.data.who = r.beta.who;
+      if (r.beta.invite && !store.data.invite) rememberInvite(r.beta.invite);
+    }
     store.data.seenWelcome = true;
     store.save();
+    applyInvite();
     closeSheets();
     renderProfile();
     renderHome();
@@ -2665,10 +2678,83 @@ $('#btnTransferPaste').addEventListener('click', async () => {
 $('#btnTransferClaim').addEventListener('click', transferClaim);
 $('#transferInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') transferClaim(); });
 
+/* ---------------------------------------------------------- beta (4.1.8) */
+
+// Para saber si Haul se usa de verdad sin pedir cuenta: cada navegador genera un
+// identificador anónimo y, si se llegó por un enlace de invitación
+// (/?i=código), recuerda ese código. Los dos viajan con cada petición y no
+// llevan nombre. El servidor cuenta con ellos quién guarda algo cada semana.
+const INVITE_COOKIE = 'haul_i';
+const MANIFEST_HREF = '/manifest.webmanifest';
+const cleanInvite = (v) => {
+  const code = String(v || '').trim().toLowerCase();
+  return /^[a-z0-9]{4,12}$/.test(code) ? code : '';
+};
+
+function newWho() {
+  try { if (crypto.randomUUID) return crypto.randomUUID(); } catch {}
+  const bytes = new Uint8Array(16);
+  try { crypto.getRandomValues(bytes); } catch { for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256); }
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function readInviteCookie() {
+  try { return cleanInvite((document.cookie.match(/(?:^|;\s*)haul_i=([^;]+)/) || [])[1]); } catch { return ''; }
+}
+
+function rememberInvite(code) {
+  store.data.invite = code;
+  store.data.inviteAck = false;
+  store.save();
+}
+
+function initBeta() {
+  if (!store.data.who) { store.data.who = newWho(); store.save(); }
+  const params = new URLSearchParams(location.search);
+  const fromLink = cleanInvite(params.get('i'));
+  if (params.has('i')) {
+    // el código no se queda en la barra de direcciones: nadie lo comparte sin querer
+    params.delete('i');
+    const rest = params.toString();
+    try { history.replaceState(history.state, '', location.pathname + (rest ? '?' + rest : '') + location.hash); } catch {}
+  }
+  // la primera invitación manda: abrir después el enlace de otra persona no cambia quién eres
+  if (!store.data.invite) {
+    const code = fromLink || readInviteCookie();
+    if (code) rememberInvite(code);
+  }
+  applyInvite();
+}
+
+function applyInvite() {
+  const code = store.data.invite;
+  const link = document.querySelector('link[rel="manifest"]');
+  if (!code) return;
+  // Dos caminos para que el icono de la pantalla de inicio del iPhone herede el
+  // código (no comparte datos con Safari): el manifiesto hace que el icono abra
+  // /?i=código, y la cookie cubre el caso de que iOS la copie al instalar.
+  if (link) link.href = `${MANIFEST_HREF}?i=${code}`;
+  try { document.cookie = `${INVITE_COOKIE}=${code}; max-age=31536000; path=/; SameSite=Lax`; } catch {}
+  if (store.data.inviteAck) return;
+  api('/beta/open', { method: 'POST', body: {} }).then((r) => {
+    if (store.data.invite !== code) return;
+    if (r.valid) {
+      store.data.inviteAck = true;
+    } else {
+      // código mal copiado o inventado: se olvida, y un enlace bueno podrá entrar después
+      store.data.invite = '';
+      if (link) link.href = MANIFEST_HREF;
+      try { document.cookie = `${INVITE_COOKIE}=; max-age=0; path=/; SameSite=Lax`; } catch {}
+    }
+    store.save();
+  }).catch(() => { /* sin red: se vuelve a intentar la próxima vez que se abra Haul */ });
+}
+
 /* -------------------------------------------------------------- arranque */
 
 function boot() {
   store.load();
+  initBeta();
   // que el navegador no borre los datos de Haul por falta de uso (Safari lo hace
   // con las webs que no visitas en una semana; con el icono de inicio, no)
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

@@ -1,5 +1,40 @@
 # Cambios
 
+## 4.1.8 · 24 de noviembre de 2026
+
+### La beta se puede medir: quién guarda algo cada semana
+
+El umbral de la beta es «15 personas activas por semana» y Haul no tiene
+cuentas: el servidor no distinguía a una persona de otra. Ahora sí, sin pedir
+registro ni guardar nombres.
+
+- **Enlace de invitación por tester** (`/?i=k7qf3m`). Al abrirlo, la app
+  recuerda el código y lo manda con cada petición; el código desaparece de la
+  barra de direcciones. La primera invitación manda: abrir después el enlace
+  de otra persona no cambia quién eres. Un código inventado se olvida.
+- **Quien llega sin invitación** cuenta con un identificador anónimo que
+  genera su navegador (un dispositivo = una persona).
+- **Panel privado** con la clave de diagnóstico:
+  `/api/beta/report?key=…&html=1`. Testers con acceso, con primer producto,
+  personas activas y productos guardados esta semana, una fila por código con
+  sus semanas, y las tres tiendas con más lecturas fallidas. Sin `&html=1`
+  responde en JSON.
+- **Crear invitaciones**: `/api/beta/invites/new?key=…&n=15`; con `&test=1`,
+  un código propio que no cuenta en ningún número.
+- **Semanas de lunes a domingo, hora de Madrid.** La semana 1 es la primera
+  completa tras el arranque (14–20 dic); la 8, la del 1 al 7 de febrero.
+  `BETA_START` cambia el día de arranque.
+- **iPhone**: el icono de la pantalla de inicio no comparte datos con Safari.
+  Con invitación, el manifiesto se pide como `/manifest.webmanifest?i=código`
+  y el icono abre `/?i=código`; además se deja una cookie con el código. Y
+  «Pasar mis listas» lleva también la identidad de la beta. Pendiente de
+  probar en un iPhone de verdad.
+- Tablas nuevas `invites` y `beta_events` (SQLite y Postgres). No se guardan
+  nombres, IPs ni qué producto es: solo código o identificador, tienda, y
+  fecha. Si apuntar falla, el producto se guarda igual.
+- Pruebas: `node test/beta.js` (23 de cuentas y semanas; con `BASE=` local,
+  17 más del camino completo).
+
 ## 4.1.7 · 23 de noviembre de 2026
 
 ### Pasar tus listas de Safari al icono (y de un móvil a otro)

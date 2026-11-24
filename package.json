@@ -1,6 +1,6 @@
 {
   "name": "haul",
-  "version": "4.1.7",
+  "version": "4.1.8",
   "private": true,
   "description": "Haul — guarda, organiza y comparte todo lo que quieres comprar",
   "main": "server.js",
@@ -13,6 +13,7 @@
     "test:bench": "node test/bench.js",
     "test:ai": "node test/ai.js",
     "test:awin": "node test/awin.js",
+    "test:beta": "node test/beta.js",
     "test:queue": "node test/queue.js",
     "bench:local": "node test/bench-local.js"
   },

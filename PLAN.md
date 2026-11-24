@@ -1,138 +1,52 @@
-# PLAN.md · HAUL · 7 de noviembre de 2026
+# PLAN.md · HAUL · 24 de noviembre de 2026
 
-Estado al cierre del día: A2, C1–C3, B2–B3 y D4 hechos y probados en local;
-A1/A3/A4 esperan el `.env` con DIAG_TOKEN; C5 y B4 esperan clave y cuenta;
-D1–D3 esperan tu prueba en el iPhone. Detalle en PROGRESS.md.
+Tarea vigente (CLAUDE.md): **beta en manos de 15 testers el 10 de diciembre de
+2026.** Terminada cuando 15 personas tienen acceso y han guardado su primer
+producto. El plan anterior (7 nov: banco, AWIN, Claude, Atajo) está en
+`.backups/2026-11-24-before-4-1-8/PLAN.md`; AWIN queda fuera de alcance hasta
+el veredicto.
 
-Cuatro frentes. Orden propuesto: A (arranca y espera) → D (análisis corto) →
-C (construir) → B (diseño hoy, construir cuando haya cuenta). Cada paso dice
-cómo se comprueba. Nada se toca sin luz verde.
+## Medir personas activas por semana (aprobado el 24 nov)
 
-## Antes de empezar (lo haces tú, 2 minutos)
-- Crear `.env` en la raíz con `DIAG_TOKEN=…` (el del panel de Render). Yo no
-  escribo claves: los comandos las leen del `.env`. `.env` se añade a
-  `.gitignore` y nunca va a la carpeta limpia.
-- Clave de Anthropic: en este Mac no hay ninguna (comprobado el 7 nov). Se
-  crea en la Console (platform.claude.com → API keys, con facturación
-  activa), se pone en `.env` como `ANTHROPIC_API_KEY=…` para probar en local y
-  en el panel de Render para producción. Hasta entonces, C se construye y se
-  prueba con la clave en local cuando la tengas.
-- AWIN: cuenta de publisher sin tiendas aprobadas (7 nov). B se construye
-  detrás de variables (`AWIN_PUBLISHER_ID`, `AWIN_TOKEN`) y se activa tienda a
-  tienda según lleguen las aprobaciones.
+Haul no tiene cuentas. Cada tester recibe un enlace de invitación propio
+(`/?i=código`); quién es cada código lo apunta Alejandro en sus notas, el
+servidor solo ve el código. Quien llega sin invitación cuenta con un
+identificador anónimo de su navegador.
 
-## A · Banco al 92 % de forma consistente
-Hoy el banco guarda solo la última pasada; «consistente» exige varias.
-1. **Pasada 1 en Render** (`/api/bench/run?fresh=1`, enlaces nuevos). Medir
-   cuánto tarda y cuánto desbloqueador gasta (`/api/health` → `unlockerUsage`;
-   tope 300/día). Comprobación: informe con % y lista de fallos.
-2. **Historial de pasadas** en `lib/bench.js`: guardar las últimas 5 pasadas
-   por enlace (`bench:history`) y, en el informe, una columna «estable /
-   inestable» (acierta en todas / falla a ratos). Comprobación: `npm test`
-   más una pasada local con `--limit 5` que escriba el historial.
-3. **Pasadas 2 y 3** a horas distintas. Comprobación: tres pasadas ≥ 92 % y
-   la lista de enlaces inestables.
-4. **Arreglar los inestables** que dependan de código (reintentos, tiempos,
-   adaptador). Los que dependan de terceros (Depop KYC, Shein) se documentan.
-5. Actualizar `test/banco-estado.md` y el CHANGELOG. Subir y repetir pasada.
+| # | Paso | Estado |
+|---|---|---|
+| 1 | La app guarda el código y un identificador anónimo y los manda al guardar | Hecho y probado en local (4.1.8) |
+| 2 | El servidor apunta cada guardado y la primera apertura de cada invitación | Hecho; `node test/beta.js`, 40 pruebas |
+| 3 | Panel privado: `/api/beta/report?key=…&html=1` | Hecho; visto en el navegador |
+| 4 | El código sobrevive al «Añadir a pantalla de inicio» del iPhone | Construido; **falta la prueba en el iPhone** |
+| 5 | Lecturas fallidas por tienda, para los tres fallos del domingo | Hecho |
+| 6 | Subir la 4.1.8, comprobar `/api/health` y un guardado real en Render | **Pendiente (subida de Alejandro)** |
 
-## B · AWIN con el mínimo peso para la app
-Lo que da AWIN (documentación leída hoy):
-- **Link builder** (`POST /publishers/{id}/linkbuilder/generate`, por lotes de
-  100): convierte el enlace de una pieza en enlace de afiliado. Ingreso por
-  compra, cero lectura de tiendas. AWIN avisa de que no es para usarlo «en
-  vivo» desde el navegador: se hace en el servidor, en segundo plano.
-- **Feeds de producto** (JSON Lines por anunciante e idioma, solo con
-  partnership aprobada): nombre, precio, foto, stock. El feed de Zalando o
-  ASOS tiene cientos de miles de filas: descargarlo entero cada día sí
-  sobrecarga.
-Diseño eficiente, en este orden:
-1. **Pedir aprobación** (lo haces tú, en el directorio de anunciantes de
-   AWIN) a las tiendas de HAUL que trabajen con AWIN en España. Empezar por
-   5; candidatas a comprobar en el directorio: Zalando, ASOS, Etsy, Douglas,
-   Decathlon, Leroy Merlin, MediaMarkt, Uniqlo. Sin aprobación no hay feed ni
-   enlaces: el código queda listo y se activa por tienda.
-2. **Enlaces de afiliado en segundo plano**: al guardar una pieza de una
-   tienda AWIN, el vigilante (que ya corre cada 12 h) pide el enlace por
-   lotes y lo guarda en la pieza. La app enseña el enlace de afiliado al
-   abrir la tienda. Comprobación: pieza de Zalando → enlace `awin1.com` en
-   la ficha; sin cuenta, todo sigue igual.
-3. **Precios desde el feed, no desde la tienda**: una vez al día, por cada
-   anunciante del que haya piezas, descargar el feed *en streaming* y
-   quedarse solo con las filas cuya URL o referencia esté en HAUL (un
-   conjunto en memoria). Sustituye la lectura por scraping en el vigilante
-   para esas tiendas: menos desbloqueador, menos Chromium. Comprobación:
-   `WATCH` lee de feed las piezas de esas tiendas y marca `mode: 'awin'`.
-4. Medir: tiempo y memoria por feed, llamadas ahorradas al desbloqueador.
+## Lo que queda hasta el 10 de diciembre, en orden
 
-## C · API de Claude: capturas y datos como puntal
-Hoy la captura pasa por Tesseract en el móvil: lenta, floja con precios y
-nombres. El lector de fichas, cuando una tienda bloquea, se queda en
-«parcial».
-1. **`lib/ai.js`** con el SDK oficial (`@anthropic-ai/sdk`): una función
-   `readShot(imagen)` que devuelve `{title, price, currency, shop, url,
-   color, size, confidence}` con salida estructurada (JSON validado). Sin
-   clave en el entorno, la app sigue como hoy. Tope diario configurable
-   (`AI_DAILY_LIMIT`) y caché por huella de imagen. Comprobación:
-   `node test/ai.js` con 3 capturas reales (Zalando, Amazon, Vinted).
-2. **`POST /api/shot`**: el móvil manda la captura ya reducida (como hoy) y
-   el servidor responde con los campos. ZXing (códigos) se queda delante;
-   Tesseract pasa a ser el plan B si no hay clave o se agota el tope.
-   Comprobación: hoja Captura → ficha con nombre, precio y tienda en < 5 s.
-3. **Rescate de fichas «parciales»**: cuando la cascada acaba sin precio o
-   sin nombre pero hay HTML (o captura de Chromium), pedir a Claude los
-   campos a partir del texto visible. Comprobación: los enlaces del banco
-   que hoy quedan en «parcial» por lectura (no por muro) suben.
-4. **Modelo** (decidido el 7 nov, a petición tuya por calidad-coste):
-   Claude Haiku 5.5 (`claude-haiku-5-5`) para leer capturas y rescatar
-   fichas: es extracción de campos, no razonamiento, y cuesta ≈ 0,0003 € por
-   captura frente a ≈ 0,01 € de Opus 5.5. Configurable con `AI_MODEL`; si en
-   la prueba con capturas reales falla nombres o precios, se sube a Opus 5.5
-   cambiando la variable.
-5. Medir coste real en `/api/health` (capturas/día, tokens, euros estimados).
+1. **Alejandro sube la 4.1.8** desde `~/Desktop/haul-v4.0-para-github`.
+   Comprobación: `/api/health` dice 4.1.8.
+2. **Código de prueba propio**: `/api/beta/invites/new?key=…&test=1`. Alejandro
+   abre ese enlace en su iPhone (Safari), instala el icono desde ahí, guarda
+   un producto desde el icono y mira el panel. Si el guardado no sale bajo su
+   código, el paso 4 falla: plan B, pedir a los testers que usen «Tengo un
+   código» al instalar el icono.
+3. **15 invitaciones**: `/api/beta/invites/new?key=…&n=15`. Alejandro apunta
+   código → persona en sus notas.
+4. **Los tres primeros enlaces, el mismo día** en que el paso 2 sale bien. Al
+   invitar: decir que la beta registra si se guardan productos, sin nombres.
+5. **Los doce restantes** antes del 10 de diciembre. La tarea se cierra cuando
+   el panel dice 15 con acceso y 15 con primer producto.
 
-## D · ¿Merece la pena el Atajo de iPhone?
-Hecho hoy: iOS sigue sin «Web Share Target» (bug de WebKit abierto desde
-2019; nota de diciembre de 2025 lo confirma). Una web no puede aparecer en
-el menú Compartir del iPhone; solo un Atajo o una app nativa.
-1. **Prueba real con el Atajo actual** (sin conversión): Amazon, Zalando,
-   Vinted, Zara y Safari. Anotar: funciona / qué llega / cuántos toques.
-2. **Compararlo con el camino sin Atajo**: Compartir → Copiar enlace → abrir
-   Haul (lee el portapapeles sola). Son dos toques más, pero no hay nada que
-   instalar ni que se rompa.
-3. **Decidir** con criterios: acierta en las 5 apps, se instala en < 1 min,
-   no necesita mantenimiento. Opciones: (1) Atajo como extra y portapapeles
-   como camino principal en la guía; (2) solo portapapeles, retirar el
-   Atajo; (3) app nativa con extensión de Compartir (Capacitor, App Store,
-   99 €/año y revisión de Apple) cuando HAUL tenga tracción.
-   Recomendación provisional: (1), por coste cero y sin dependencias.
-4. Dejar la guía del perfil acorde con la decisión.
+## Decisiones
 
-## Lo que no entra hoy
-- Persistencia de listas (pendiente de saber si falla móvil o servidor).
-- Vivaticket en Render (se comprueba de paso con la pasada del banco).
+- Semana de lunes a domingo, hora de Madrid. Semana 1 = 14–20 dic; semana 8
+  (la del veredicto) = 1–7 feb de 2027.
+- El uso de Alejandro no cuenta: va con un código de prueba.
+- Si un tester reenvía su enlace, los dos cuentan como una persona.
+- Sin nombres ni IPs en el servidor.
 
-## A bis · Medir el 92 % sin que mande el mercado (aprobada; pasos 1-3 hechos el 22 nov en la 4.1.4)
+## Fuera de alcance hasta el veredicto (CLAUDE.md)
 
-Dos pasadas (79 % y 80 %) enseñan dos ruidos que no son del lector: precios que
-se mueven (9-10 por semana en Black Friday) y tiempos agotados del
-desbloqueador que cambian de tienda cada día. Propuesta, por pasos:
-
-1. **Verificador de precio con Claude.** Cuando nombre y foto aciertan pero el
-   precio no cuadra con la hoja, el banco le pasa a Claude (Haiku) el texto
-   visible de la misma página y le pide el precio actual. Si coincide con el
-   del lector, la fila cuenta como acierto «precio verificado, hoja
-   desfasada» y el informe propone el valor nuevo para la hoja. Si no
-   coincide, es fallo del lector. Dos métodos independientes (estructura de
-   la página contra lectura del texto) que tienen que coincidir. Coste: unas
-   diez lecturas por pasada, menos de un céntimo. Comprobación: repetir a mano
-   una muestra de las filas que el verificador dé por buenas.
-2. **Segunda oportunidad a los tiempos agotados**, solo en el banco y en el
-   vigilante (nunca al añadir, para no hacer esperar al usuario): al final de
-   la pasada se reintentan una vez las filas que fallaron por tiempo agotado.
-   El informe da las dos cifras: a la primera y con reintento.
-3. **Fuera lo efímero.** Wallapop vende sus anuncios en días: sus filas pasan a
-   anuncios de vendedores profesionales con stock, o se cambian por otra
-   tienda de segunda mano más estable.
-4. Tres pasadas el mismo día con todo lo anterior. «Consistente» = las tres ≥
-   92 % en la cifra principal (lector correcto frente a la página de hoy).
+Afiliación (AWIN incluido), anti-bot de Zara / Amazon / Temu / AliExpress,
+cambios de estética, app nativa, precios por región.

@@ -1,8 +1,11 @@
 # PROGRESS.md · HAUL
 
-Última actualización: 23 de noviembre de 2026. En vivo: 4.1.6. En local,
-probada y sin subir: 4.1.7 (pasar listas con un código).
-= 4.1.3 + verificador de precio del banco + guía del iPhone del 15 nov.
+Última actualización: 24 de noviembre de 2026. En vivo: 4.1.7 (pasar listas
+con un código, probado en el iPhone). En local, probada y sin subir: 4.1.8
+(medición de la beta).
+
+**Tarea vigente: beta en manos de 15 testers el 10 de diciembre de 2026.** El
+orden de lo que queda está en PLAN.md.
 
 ## Hecho
 - **v4.0** (24–26 oct): vigilancia de precios con avisos push opcionales,
@@ -40,11 +43,42 @@ probada y sin subir: 4.1.7 (pasar listas con un código).
   Claude, segunda oportunidad a los tiempos agotados, anuncios vendidos fuera
   del cálculo, la comprobación de Amazon cuenta como muro. Fusionada con la
   4.1.3 y con la guía del iPhone del 15 nov, que no había llegado a GitHub.
+- **4.1.7 · pasar listas con un código** (24 nov, en Render): Safari y el
+  icono de inicio no comparten datos en iPhone y las llaves de las listas se
+  quedaban en Safari. Perfil → Pasar mis listas da un código de un solo uso
+  (15 min); en el otro sitio, Tengo un código → Recuperar. Además Haul pide al
+  navegador que no borre sus datos. Probado en local con dos orígenes de datos
+  separados y por Alejandro en su iPhone, de Safari al icono (24 nov).
+- **4.1.8 · medición de la beta** (24 nov, en local): enlace de invitación por
+  tester (`/?i=código`), identificador anónimo para quien llega sin él, tablas
+  `invites` y `beta_events`, panel privado `/api/beta/report?key=…&html=1` con
+  los números del domingo, lecturas fallidas por tienda, y el código dentro
+  del manifiesto para el icono del iPhone. 40 pruebas en `test/beta.js`, más
+  adaptadores (36), vigilante (10) y smoke (40). Probado en el navegador:
+  abrir un enlace de invitación, guardar un producto y verlo en el panel.
 
 ## Pendiente
+- **Beta, lo primero**: subir la 4.1.8; código de prueba propio y prueba en el
+  iPhone (Safari → instalar icono → guardar desde el icono → sale bajo el
+  código); crear las 15 invitaciones; mandar los tres primeros enlaces ese
+  mismo día. Sin Xcode en este Mac no hay simulador: la prueba del icono solo
+  se puede hacer en el iPhone de Alejandro.
+- **Ojo con el número de versión**: la 4.1.8 es la medición de la beta. El
+  arreglo de Shopify para el banco que se menciona abajo, si se hace, será la
+  4.1.9 (otra sesión lo apuntó como 4.1.8 el 24 nov a las 21:26, mientras
+  esta trabajaba en la carpeta).
+- **Por decidir**: la condición «beta con ≥ 90 % en el banco» (23 nov) choca
+  con la tarea vigente del CLAUDE.md, que no deja dedicar horas al anti-bot
+  antes de la beta. Recomendación del 24 nov: quitarla; ningún tester necesita
+  ese número para guardar un producto.
+- **Por decidir**: el CLAUDE.md nuevo cuenta la situación laboral de
+  Alejandro. No se ha copiado a la carpeta de GitHub hasta confirmar que el
+  repositorio es privado.
+- **AWIN: fuera de alcance hasta el veredicto** (CLAUDE.md, 24 nov). Lo de
+  abajo se queda como estaba, sin tocar.
 - **Banco en Render**: pasadas 1-7 = 79, 80, 88 (86 real), 88, 88, 89, 87 %
   (la 8 no llegó a lanzarse: el Mac se durmió y se cerró la sesión). Estable en
-  torno al 88 %. Falta para el 90 % de la beta: 4.1.7 con la página de Shopify
+  torno al 88 %. Falta para el 90 % de la beta: 4.1.8 con la página de Shopify
   en el mercado de España para el verificador (Pompeii ×2), comprobar a mano El
   Corte Inglés E049 y `TARGET_PCT` = 90; luego tres pasadas. Por debajo quedan
   anti-bot (Shein, AliExpress, About You, Primark, Temu) y Depop (KYC).
@@ -76,16 +110,14 @@ probada y sin subir: 4.1.7 (pasar listas con un código).
   del Mac y confirmado por Alejandro en el iPhone desde Zalando, Amazon y
   Safari. Decisión de la tarea D: el Atajo se queda (dos toques, sin copiar ni
   pegar); el camino Copiar → Pegar sigue en la guía como alternativa.
-- **Persistencia: resuelta en la 4.1.7** (falta subirla y probarla en el
-  iPhone). Causa: Safari y el icono de inicio no comparten datos en iPhone y
-  las llaves de las listas se quedaron en Safari. Arreglo: código de un solo
-  uso en Perfil (Pasar mis listas / Tengo un código). Probado en local con dos
-  orígenes de datos separados. Prueba real: Safari → Perfil → Pasar mis listas
-  → Copiar; icono → Tengo un código → Pegar → Recuperar.
 - Comprobar Vivaticket en Render. Banco: Shein ×2, About You, AliExpress E059,
   Depop ×2 (Bright Data pide KYC).
 
 ## Decisiones
+- **Medición sin cuentas** (24 nov): persona = código de invitación o, si no
+  hay, identificador anónimo del navegador. Sin nombres ni IPs en el servidor.
+  Semanas de lunes a domingo en hora de Madrid; semana 1 = 14–20 dic, semana
+  8 = 1–7 feb. El uso de Alejandro va con un código de prueba que no cuenta.
 - Objetivo del banco en 92 %, no en 95: lo que queda son tiendas que bloquean
   o cuentas de terceros, no fallos de lectura. «Consistente» = las tres últimas
   pasadas completas en objetivo.
